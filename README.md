@@ -16,3 +16,15 @@ multi-table select/insert/update.
 
 This is still a work in progress and I don't claim this package will be most
 people's preferred approach.
+
+Versions
+---
+
+This project will follow the Semantic Versioning specification, v2.0.0, and all
+tags will be prefixed with "v" to allow [gb](https://getgb.io/) to pull this
+package as an unvendored dependency.
+
+LICENSE
+---
+
+This is licensed under CC0, a very permissive public domain license
