@@ -18,6 +18,27 @@ import (
 // any SQL which is related to a single task.  This object should not be a
 // long-living object.  Once the task is complete and errors are evaluated, the
 // object's life should be considered over.
+//
+// TODO: if the DB isn't meant to be long-living, we need to be able to
+// register tables globally.  Which will mean FindAll (and future functions)
+// needs to be reconsidered.  It can't be on a table object, and in fact tables
+// may need to just become internal-only constructs.  Instead, the magic might
+// need to be on the Rows type so it can do something like r.MagicScan(object).
+// Query and Exec are where it'll get painful since those need to exist on so
+// many types.  Maybe we only do table-level insert/update magic on a Tx, so
+// tx.MagicInsert(object) auto-handles the prepare and exec.  Same with
+// tx.MagicUpdate(object, where, args...).
+//
+// It would obviously be better to allow concurrent access, but that clearly
+// destroys the purpose of this approach, where the first error halts
+// processing without requiring per-operation error checking.
+//
+// On the other hand, if this were to rescope to only be a transaction wrapper,
+// and not expose any functionality until a transaction has started, the
+// per-task approach makes a lot more sense, and the table registration magic
+// can still be done globally.
+//
+// This needs thought.
 type DB struct {
 	db     *sql.DB
 	tables []*MagicTable
