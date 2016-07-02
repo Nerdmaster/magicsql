@@ -1,11 +1,12 @@
-magicdb
+magicsql
 ---
 
-magicdb.DB wraps sql.DB objects in a way that can simplify certain operations.
-First, instead of returning errors after every function call, DB and all
-objects it creates (Tx, Stmt, etc) silently fail on any sql.DB error.  This
-error is stored internally, and prevents any of the objects from performing any
-further tasks, allowing the caller to handle the error wherever it makes sense.
+magicsql wraps database/sql types and functions in a way that can simplify
+certain operations.  First, instead of returning errors after every function
+call, DB and all objects it creates (Tx, Stmt, etc) silently fail on any sql.DB
+error.  This error is stored internally, and prevents any of the objects from
+performing any further tasks, allowing the caller to handle the error wherever
+it makes sense.
 
 Additionally, there are optional types which utilize reflection to simplify the
 most common operations so that you can tag your structures and get easy read,
