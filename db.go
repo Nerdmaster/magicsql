@@ -5,44 +5,90 @@ package magicsql
 
 import (
 	"database/sql"
+	"fmt"
 	"reflect"
+	"sync"
 )
 
-// DB is a wrapper for sql.DB which captures errors in a way that allows the
-// caller to defer error handling until a convenient time.  This structure
-// responds to most of the same functions as sql.DB, and returns compatible
-// structures, but never returns an error directly.  DB.Err() can be called at
-// any time to check for the first error captured.
-//
-// DB is not meant for concurrent use.  It should be used to gather together
-// any SQL which is related to a single task.  This object should not be a
-// long-living object.  Once the task is complete and errors are evaluated, the
-// object's life should be considered over.
-//
-// TODO: if the DB isn't meant to be long-living, we need to be able to
-// register tables globally.  Which will mean FindAll (and future functions)
-// needs to be reconsidered.  It can't be on a table object, and in fact tables
-// may need to just become internal-only constructs.  Instead, the magic might
-// need to be on the Rows type so it can do something like r.MagicScan(object).
-// Query and Exec are where it'll get painful since those need to exist on so
-// many types.  Maybe we only do table-level insert/update magic on a Tx, so
-// tx.MagicInsert(object) auto-handles the prepare and exec.  Same with
-// tx.MagicUpdate(object, where, args...).
-//
-// It would obviously be better to allow concurrent access, but that clearly
-// destroys the purpose of this approach, where the first error halts
-// processing without requiring per-operation error checking.
-//
-// On the other hand, if this were to rescope to only be a transaction wrapper,
-// and not expose any functionality until a transaction has started, the
-// per-task approach makes a lot more sense, and the table registration magic
-// can still be done globally.
-//
-// This needs thought.
+// DB wraps an sql.DB, providing the Operation spawner for deferred-error
+// database operations.  Like sql.DB, this DB type is meant to live more or
+// less globally and be a long-living object.
 type DB struct {
+	db      *sql.DB
+	typemap map[reflect.Type]*MagicTable
+	namemap map[string]*MagicTable
+	m       sync.RWMutex
+}
+
+// Open attempts to connect to a database, wrapping the sql.Open call,
+// returning the new magicsql.DB and error if any.  This isn't storing the
+// error for later, as there's nothing which can happen if the database can't
+// be opened.
+func Open(driverName, dataSourceName string) (*DB, error) {
+	var sqldb, err = sql.Open(driverName, dataSourceName)
+	if err != nil {
+		return nil, err
+	}
+	return Wrap(sqldb), nil
+}
+
+// Wrap is used to create a new DB from an existing connection
+func Wrap(db *sql.DB) *DB {
+	return &DB{
+		db:      db,
+		typemap: make(map[reflect.Type]*MagicTable),
+		namemap: make(map[string]*MagicTable),
+	}
+}
+
+// DataSource returns the underlying sql.DB pointer so the caller can do
+// lower-level work which isn't wrapped in this package
+func (db *DB) DataSource() *sql.DB {
+	return db.db
+}
+
+// RegisterTable registers a table structure using NewMagicTable, then stores
+// the table for lookup in an Operation's helper functions
+func (db *DB) RegisterTable(tableName string, generator func() interface{}) *MagicTable {
+	var t = NewMagicTable(tableName, generator)
+
+	db.m.Lock()
+	defer db.m.Unlock()
+	db.typemap[t.RType] = t
+	db.namemap[tableName] = t
+
+	return t
+}
+
+// findTableByName looks up the table by its name, for use in creating SQL queries
+// and putting data into structures
+func (db *DB) findTableByName(tableName string) *MagicTable {
+	db.m.RLock()
+	defer db.m.RUnlock()
+
+	return db.namemap[tableName]
+}
+
+// Start creates an Operation, suitable for a short-lived task.  This is the
+// entry point for any of the sql wrapped magic.  An Operation should be
+// considered a short-lived object which is not safe for concurrent access
+// since it needs to be able to halt on any error with any operation it
+// performs.  Concurrent access could be extremely confusing in this context
+// due to the possibility of Operation.Err() returning an error from a
+// different goroutine than the one doing the checking.
+func (db *DB) Start() *Operation {
+	return &Operation{parent: db, db: db.db}
+}
+
+// Operation represents a short-lived single-purpose combination of database
+// calls.  On the first failure, its internal error is set, which all
+// "children" (statements, transactions, etc) will see.  All children will
+// refuse to perform any functions once an error has occurred, making it safe
+// to perform a chain of related database calls and only check for an error
+// when it makes sense.
+type Operation struct {
+	parent *DB
 	db     *sql.DB
-	tables []*MagicTable
-	tmap   map[reflect.Type]*MagicTable
 	err    error
 }
 
@@ -51,96 +97,97 @@ type errorable interface {
 	SetErr(error)
 }
 
-// Open attempts to connect to a database, wrapping the sql.Open call, storing
-// database and the error result
-func Open(driverName, dataSourceName string) *DB {
-	var sqldb, err = sql.Open(driverName, dataSourceName)
-	var db = Wrap(sqldb)
-	db.err = err
-	return db
+// Err returns the *first* error which occurred on any database call owned by the Operation
+func (op *Operation) Err() error {
+	return op.err
 }
 
-// Wrap is used to create a new DB from an existing connection
-func Wrap(db *sql.DB) *DB {
-	return &DB{db: db, tmap: make(map[reflect.Type]*MagicTable)}
-}
-
-// Err returns the *first* error which occurred
-func (db *DB) Err() error {
-	return db.err
-}
-
-// SetErr tells DB to stop handling any more queries.  It shouldn't usually be
-// called directly, but it can be if you need to tell the DB "here's a thing
-// that may be an error; don't do any more work if it is".
-func (db *DB) SetErr(err error) {
-	if db.Err() != nil {
+// SetErr tells the Operation to stop handling any more queries.  It shouldn't
+// usually be called directly, but it can be if you need to tell the object
+// "here's a thing that may be an error; don't do any more work if it is".
+func (op *Operation) SetErr(err error) {
+	if op.Err() != nil {
 		return
 	}
 
-	db.err = err
+	op.err = err
 }
 
-// RegisterTable registers and returns a Table structure with some pre-computed
-// reflection data for the given generator.  The generator must be a
-// zero-argument function which simply returns the type to be used with mapping
-// sql to data.  It must be safe to run the generator as needed.
-//
-// The structure returned by the generator must have tags for explicit table
-// names, or else a lowercased version of the field name will be inferred.  Tag
-// names must be in the form `sql:"field_name"`.  A field name of "-" tells the
-// package to skip that field.  Non-exported fields are skipped.
-func (db *DB) RegisterTable(tableName string, generator func() interface{}) *MagicTable {
-  var t = &MagicTable{generator: generator, name: tableName, db: db, err: db}
-	t.reflect()
-	db.tables = append(db.tables, t)
-	db.tmap[t.RType] = t
-	return t
-}
-
-// Query wraps sql's Query to ease future adaptations
-func (db *DB) Query(query string, args ...interface{}) *Rows {
-	if db.Err() != nil {
-		return &Rows{nil, db}
+// Query wraps sql's Query, returning a wrapped Rows object
+func (op *Operation) Query(query string, args ...interface{}) *Rows {
+	if op.Err() != nil {
+		return &Rows{nil, op}
 	}
 
-	var r, err = db.db.Query(query, args...)
-	db.SetErr(err)
-	return &Rows{r, db}
+	var r, err = op.db.Query(query, args...)
+	op.SetErr(err)
+	return &Rows{r, op}
 }
 
-// Exec wraps sql's DB.Exec, returning a wrapped result
-func (db *DB) Exec(query string, args ...interface{}) *Result {
-	if db.Err() != nil {
-		return &Result{nil, db}
+// Exec wraps sql's DB.Exec, returning a wrapped Result
+func (op *Operation) Exec(query string, args ...interface{}) *Result {
+	if op.Err() != nil {
+		return &Result{nil, op}
 	}
 
-	var r, err = db.db.Exec(query, args...)
-	db.SetErr(err)
-	return &Result{r, db}
+	var r, err = op.db.Exec(query, args...)
+	op.SetErr(err)
+	return &Result{r, op}
 }
 
-// Prepare wrap's sql's DB.Prepare, returning a wrapped statement
-func (db *DB) Prepare(query string) *Stmt {
-	if db.Err() != nil {
-		return &Stmt{nil, db}
+// Prepare wrap's sql's DB.Prepare, returning a wrapped Stmt
+func (op *Operation) Prepare(query string) *Stmt {
+	if op.Err() != nil {
+		return &Stmt{nil, op}
 	}
 
-	var st, err = db.db.Prepare(query)
-	db.SetErr(err)
-	return &Stmt{st, db}
+	var st, err = op.db.Prepare(query)
+	op.SetErr(err)
+	return &Stmt{st, op}
 }
 
 // Begin wraps sql's Begin and returns a wrapped Tx.  When the transaction is
 // complete, instead of manually rolling back or committing, simply call
 // tx.Done() and it will rollback / commit based on the error state.  If you
-// need force rollback, set the owning DB object's error via SetErr().
-func (db *DB) Begin() *Tx {
-	if db.Err() != nil {
-		return &Tx{nil, db}
+// need to force a rollback, set an error manually with Operation.SetErr().
+func (op *Operation) Begin() *Tx {
+	if op.Err() != nil {
+		return &Tx{nil, op}
 	}
 
-	var tx, err = db.db.Begin()
-	db.SetErr(err)
-	return &Tx{tx, db}
+	var tx, err = op.db.Begin()
+	op.SetErr(err)
+	return &Tx{tx, op}
+}
+
+// FindAllRows runs a select query with the given where clause and bound args,
+// returning a wrapped Rows object
+func (op *Operation) FindAllRows(tableName, where string, args ...interface{}) *Rows {
+	if op.Err() != nil {
+		return &Rows{nil, op}
+	}
+
+	var t = op.parent.findTableByName(tableName)
+	if t == nil {
+		op.SetErr(fmt.Errorf("table %s not registered", tableName))
+		return &Rows{nil, op}
+	}
+
+	var sql = t.BuildQuerySQL(where)
+	var stmt = op.Prepare(sql)
+	return stmt.Query(args...)
+}
+
+// FindAll runs a select query with the given where clause and bound args,
+// returning a slice of generated objects
+func (op *Operation) FindAll(tableName, where string, args ...interface{}) []interface{} {
+	var rows = op.FindAllRows(tableName, where, args...)
+	var t = op.parent.findTableByName(tableName)
+	var data []interface{}
+	for rows.Next() {
+		var obj = t.generator()
+		rows.Scan(t.ScanStruct(obj)...)
+		data = append(data, obj)
+	}
+	return data
 }
