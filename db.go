@@ -69,14 +69,14 @@ func (db *DB) findTableByName(tableName string) *MagicTable {
 	return db.namemap[tableName]
 }
 
-// Start creates an Operation, suitable for a short-lived task.  This is the
-// entry point for any of the sql wrapped magic.  An Operation should be
-// considered a short-lived object which is not safe for concurrent access
-// since it needs to be able to halt on any error with any operation it
+// Operation returns an Operation instance, suitable for a short-lived task.
+// This is the entry point for any of the sql wrapped magic.  An Operation
+// should be considered a short-lived object which is not safe for concurrent
+// access since it needs to be able to halt on any error with any operation it
 // performs.  Concurrent access could be extremely confusing in this context
 // due to the possibility of Operation.Err() returning an error from a
 // different goroutine than the one doing the checking.
-func (db *DB) Start() *Operation {
+func (db *DB) Operation() *Operation {
 	return &Operation{parent: db, db: db.db}
 }
 

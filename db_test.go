@@ -40,7 +40,7 @@ func TestFindAll(t *testing.T) {
 	source.Exec("INSERT INTO foos (one,two,tree,four) VALUES (?, ?, ?, ?)", "sploop", 2, true, 4)
 
 	db.RegisterTable("foos", newFoo)
-	var op = db.Start()
+	var op = db.Operation()
 	var fooList = op.FindAll("foos", "one = ?", "thing")
 	if op.Err() != nil {
 		t.Log(op.Err())
