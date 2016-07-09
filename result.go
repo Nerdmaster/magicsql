@@ -6,7 +6,7 @@ import (
 
 // Result is a wrapper for sql.Result
 type Result struct {
-	r sql.Result
+	r   sql.Result
 	err errorable
 }
 

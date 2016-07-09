@@ -1,14 +1,14 @@
 package magicsql
 
 import (
-  "fmt"
-  "reflect"
-  "strings"
+	"fmt"
+	"reflect"
+	"strings"
 )
 
 type boundField struct {
-  Name     string
-  Field    reflect.StructField
+	Name  string
+	Field reflect.StructField
 }
 
 // MagicTable represents a named database table for reading data from a single
@@ -16,10 +16,10 @@ type boundField struct {
 // database magic, but exposed for use in cases where wrapping every DB call
 // doesn't make sense, but getting field names or simple SQL statements might.
 type MagicTable struct {
-	generator   func() interface{}
-  name        string
-  RType       reflect.Type
-  sqlFields   []*boundField
+	generator func() interface{}
+	name      string
+	RType     reflect.Type
+	sqlFields []*boundField
 }
 
 // NewMagicTable creates a table structure with some pre-computed reflection
@@ -42,59 +42,59 @@ func NewMagicTable(tableName string, generator func() interface{}) *MagicTable {
 // database table fields and how
 func (t *MagicTable) reflect() {
 	var obj = t.generator()
-  t.RType = reflect.TypeOf(obj).Elem()
+	t.RType = reflect.TypeOf(obj).Elem()
 	var rVal = reflect.ValueOf(obj).Elem()
 
-  for i := 0; i < t.RType.NumField(); i++ {
-    var sf = t.RType.Field(i)
+	for i := 0; i < t.RType.NumField(); i++ {
+		var sf = t.RType.Field(i)
 
 		if !rVal.Field(i).CanSet() {
-      continue
-    }
+			continue
+		}
 
-    var sqlf = sf.Tag.Get("sql")
-    if sqlf == "-" {
-      continue
-    }
-    if sqlf == "" {
-      sqlf = strings.ToLower(sf.Name)
-    }
+		var sqlf = sf.Tag.Get("sql")
+		if sqlf == "-" {
+			continue
+		}
+		if sqlf == "" {
+			sqlf = strings.ToLower(sf.Name)
+		}
 
-    t.sqlFields = append(t.sqlFields, &boundField{sqlf, sf})
-  }
+		t.sqlFields = append(t.sqlFields, &boundField{sqlf, sf})
+	}
 }
 
 // FieldNames returns all known table field names based on the tag parsing done
 // in NewMagicTable
 func (t *MagicTable) FieldNames() []string {
-  var names []string
-  for _, bf := range t.sqlFields {
-    names = append(names, bf.Name)
-  }
-  return names
+	var names []string
+	for _, bf := range t.sqlFields {
+		names = append(names, bf.Name)
+	}
+	return names
 }
 
 // ScanStruct sets up a structure suitable for calling Scan to populate dest
 func (t *MagicTable) ScanStruct(dest interface{}) []interface{} {
-  var fields = make([]interface{}, len(t.sqlFields))
-  var rVal = reflect.ValueOf(dest).Elem()
-  for i, bf := range t.sqlFields {
+	var fields = make([]interface{}, len(t.sqlFields))
+	var rVal = reflect.ValueOf(dest).Elem()
+	for i, bf := range t.sqlFields {
 		var vf = rVal.FieldByName(bf.Field.Name)
-    fields[i] = &NullableField{Value: vf.Addr().Interface()}
-  }
+		fields[i] = &NullableField{Value: vf.Addr().Interface()}
+	}
 
-  return fields
+	return fields
 }
 
 // BuildQuerySQL creates a simple SELECT query using all fields tagged when
 // parsing the structure in NewMagicTable
 func (t *MagicTable) BuildQuerySQL(where string) string {
-  var format = "SELECT %s FROM %s%s"
-  var selectFieldList = strings.Join(t.FieldNames(), ",")
-  var whereClause string
-  if where != "" {
-    whereClause = " WHERE " + where
-  }
+	var format = "SELECT %s FROM %s%s"
+	var selectFieldList = strings.Join(t.FieldNames(), ",")
+	var whereClause string
+	if where != "" {
+		whereClause = " WHERE " + where
+	}
 
-  return fmt.Sprintf(format, selectFieldList, t.name, whereClause)
+	return fmt.Sprintf(format, selectFieldList, t.name, whereClause)
 }

@@ -6,7 +6,7 @@ import (
 
 // Tx is a light wrapper for sql.Tx
 type Tx struct {
-	tx *sql.Tx
+	tx  *sql.Tx
 	err errorable
 }
 

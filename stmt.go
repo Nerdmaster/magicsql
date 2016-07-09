@@ -6,7 +6,7 @@ import (
 
 // Stmt is a light wrapper for sql.Stmt
 type Stmt struct {
-	st *sql.Stmt
+	st  *sql.Stmt
 	err errorable
 }
 
