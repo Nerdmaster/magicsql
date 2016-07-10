@@ -10,11 +10,9 @@ type boundField struct {
 	Field reflect.StructField
 }
 
-// MagicTable represents a named database table for reading data from a single
-// table into a tagged structure.  This is used internally to help with the
-// database magic, but exposed for use in cases where wrapping every DB call
-// doesn't make sense, but getting field names or simple SQL statements might.
-type MagicTable struct {
+// magicTable represents a named database table for reading data from a single
+// table into a tagged structure
+type magicTable struct {
 	generator func() interface{}
 	name      string
 	RType     reflect.Type
@@ -31,15 +29,15 @@ type MagicTable struct {
 // names, or else a lowercased version of the field name will be inferred.  Tag
 // names must be in the form `sql:"field_name"`.  A field name of "-" tells the
 // package to skip that field.  Non-exported fields are skipped.
-func NewMagicTable(tableName string, generator func() interface{}) *MagicTable {
-	var t = &MagicTable{generator: generator, name: tableName}
+func NewMagicTable(tableName string, generator func() interface{}) *magicTable {
+	var t = &magicTable{generator: generator, name: tableName}
 	t.reflect()
 	return t
 }
 
 // reflect traverses the wrapped structure to figure out which fields map to
 // database table fields and how
-func (t *MagicTable) reflect() {
+func (t *magicTable) reflect() {
 	var obj = t.generator()
 	t.RType = reflect.TypeOf(obj).Elem()
 	var rVal = reflect.ValueOf(obj).Elem()
@@ -65,7 +63,7 @@ func (t *MagicTable) reflect() {
 
 // FieldNames returns all known table field names based on the tag parsing done
 // in NewMagicTable
-func (t *MagicTable) FieldNames() []string {
+func (t *magicTable) FieldNames() []string {
 	var names []string
 	for _, bf := range t.sqlFields {
 		names = append(names, bf.Name)
@@ -74,7 +72,7 @@ func (t *MagicTable) FieldNames() []string {
 }
 
 // ScanStruct sets up a structure suitable for calling Scan to populate dest
-func (t *MagicTable) ScanStruct(dest interface{}) []interface{} {
+func (t *magicTable) ScanStruct(dest interface{}) []interface{} {
 	var fields = make([]interface{}, len(t.sqlFields))
 	var rVal = reflect.ValueOf(dest).Elem()
 	for i, bf := range t.sqlFields {

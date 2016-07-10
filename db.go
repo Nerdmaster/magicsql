@@ -15,8 +15,8 @@ import (
 // less globally and be a long-living object.
 type DB struct {
 	db      *sql.DB
-	typemap map[reflect.Type]*MagicTable
-	namemap map[string]*MagicTable
+	typemap map[reflect.Type]*magicTable
+	namemap map[string]*magicTable
 	m       sync.RWMutex
 }
 
@@ -36,8 +36,8 @@ func Open(driverName, dataSourceName string) (*DB, error) {
 func Wrap(db *sql.DB) *DB {
 	return &DB{
 		db:      db,
-		typemap: make(map[reflect.Type]*MagicTable),
-		namemap: make(map[string]*MagicTable),
+		typemap: make(map[reflect.Type]*magicTable),
+		namemap: make(map[string]*magicTable),
 	}
 }
 
@@ -49,7 +49,7 @@ func (db *DB) DataSource() *sql.DB {
 
 // RegisterTable registers a table structure using NewMagicTable, then stores
 // the table for lookup in an Operation's helper functions
-func (db *DB) RegisterTable(tableName string, generator func() interface{}) *MagicTable {
+func (db *DB) RegisterTable(tableName string, generator func() interface{}) *magicTable {
 	var t = NewMagicTable(tableName, generator)
 
 	db.m.Lock()
@@ -62,7 +62,7 @@ func (db *DB) RegisterTable(tableName string, generator func() interface{}) *Mag
 
 // findTableByName looks up the table by its name, for use in creating SQL queries
 // and putting data into structures
-func (db *DB) findTableByName(tableName string) *MagicTable {
+func (db *DB) findTableByName(tableName string) *magicTable {
 	db.m.RLock()
 	defer db.m.RUnlock()
 

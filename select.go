@@ -13,14 +13,14 @@ import (
 //     var rows = operation.From("people").Limit(10).SelectAllRows()
 type Select struct {
 	parent    *Operation
-	table     *MagicTable
+	table     *magicTable
 	where     string
 	WhereArgs []interface{}
 	limit     uint64
 	offset    uint64
 }
 
-func newSelect(p *Operation, from *MagicTable) *Select {
+func newSelect(p *Operation, from *magicTable) *Select {
 	return &Select{parent: p, table: from}
 }
 
