@@ -73,3 +73,39 @@ func TestFindAllUnregistered(t *testing.T) {
 	assert.Equal("table foos not registered", op.Err().Error(), "Error message is correct", t)
 	assert.Equal(0, len(fooList), "fooList is empty", t)
 }
+
+func TestSaveUnregistered(t *testing.T) {
+	var db = getdb()
+	var source = db.DataSource()
+
+	source.Exec("INSERT INTO foos (one,two,tree,four) VALUES (?, ?, ?, ?)", "one", 2, true, 4)
+
+	var newFoo = &Foo{ONE: "new foo"}
+
+	var op = db.Operation()
+	var result = op.Save(newFoo)
+	assert.True(op.Err() != nil, "Operation should have an error", t)
+	assert.Equal("table for type Foo not registered", op.Err().Error(), "Error message is correct", t)
+	assert.Equal(int64(0), result.RowsAffected(), "No rows affected", t)
+}
+
+type NoPKFoo struct {
+	One int
+	Two string
+}
+
+func TestSaveNoPK(t *testing.T) {
+	var db = getdb()
+	var source = db.DataSource()
+
+	source.Exec("INSERT INTO foos (one,two,tree,four) VALUES (?, ?, ?, ?)", "one", 2, true, 4)
+
+	db.RegisterTable("foos", func() interface{} { return &NoPKFoo{} })
+	var newFoo = &NoPKFoo{One: 1, Two: "two"}
+
+	var op = db.Operation()
+	var result = op.Save(newFoo)
+	assert.True(op.Err() != nil, "Operation should have an error", t)
+	assert.Equal("table for type NoPKFoo has no primary key", op.Err().Error(), "Error message is correct", t)
+	assert.Equal(int64(0), result.RowsAffected(), "No rows affected", t)
+}

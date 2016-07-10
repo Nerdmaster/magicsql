@@ -13,10 +13,11 @@ type boundField struct {
 // magicTable represents a named database table for reading data from a single
 // table into a tagged structure
 type magicTable struct {
-	generator func() interface{}
-	name      string
-	RType     reflect.Type
-	sqlFields []*boundField
+	generator  func() interface{}
+	name       string
+	RType      reflect.Type
+	sqlFields  []*boundField
+	primaryKey *boundField
 }
 
 // NewMagicTable creates a table structure with some pre-computed reflection
@@ -44,15 +45,23 @@ func (t *magicTable) reflect() {
 			continue
 		}
 
-		var sqlf = sf.Tag.Get("sql")
-		if sqlf == "-" {
+		var tag = sf.Tag.Get("sql")
+		if tag == "-" {
 			continue
 		}
+
+		var parts = strings.Split(tag, ",")
+		var sqlf = parts[0]
 		if sqlf == "" {
 			sqlf = strings.ToLower(sf.Name)
 		}
 
-		t.sqlFields = append(t.sqlFields, &boundField{sqlf, sf})
+		var bf = &boundField{sqlf, sf}
+		t.sqlFields = append(t.sqlFields, bf)
+
+		if len(parts) > 1 && parts[1] == "primary" && t.primaryKey == nil {
+			t.primaryKey = bf
+		}
 	}
 }
 

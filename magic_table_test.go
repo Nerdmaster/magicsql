@@ -9,7 +9,7 @@ import (
 
 type Foo struct {
 	ONE   string
-	TwO   int
+	TwO   int `sql:",primary"`
 	Three bool `sql:"tree"`
 	Four  int
 	Five  int `sql:"-"`
