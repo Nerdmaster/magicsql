@@ -54,15 +54,13 @@ func (db *DB) DataSource() *sql.DB {
 // names, or else a lowercased version of the field name will be inferred.  Tag
 // names must be in the form `sql:"field_name"`.  A field name of "-" tells the
 // package to skip that field.  Non-exported fields are skipped.
-func (db *DB) RegisterTable(tableName string, generator func() interface{}) *magicTable {
+func (db *DB) RegisterTable(tableName string, generator func() interface{}) {
 	var t = NewMagicTable(tableName, generator)
 
 	db.m.Lock()
 	defer db.m.Unlock()
 	db.typemap[t.RType] = t
 	db.namemap[tableName] = t
-
-	return t
 }
 
 // findTableByName looks up the table by its name, for use in creating SQL queries
