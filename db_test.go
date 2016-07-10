@@ -30,7 +30,7 @@ func getdb() *DB {
 	return db
 }
 
-func TestFindAll(t *testing.T) {
+func TestSelectAllInto(t *testing.T) {
 	var db = getdb()
 	var source = db.DataSource()
 
@@ -64,7 +64,7 @@ func TestFindAll(t *testing.T) {
 	assert.Equal("sploop", foo1.ONE, "foo1.ONE", t)
 }
 
-func TestFindAllUnregistered(t *testing.T) {
+func TestSelectAllIntoUnregistered(t *testing.T) {
 	var db = getdb()
 	var op = db.Operation()
 	var fooList []*Foo
