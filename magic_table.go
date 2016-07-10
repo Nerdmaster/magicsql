@@ -1,7 +1,6 @@
 package magicsql
 
 import (
-	"fmt"
 	"reflect"
 	"strings"
 )
@@ -84,17 +83,4 @@ func (t *MagicTable) ScanStruct(dest interface{}) []interface{} {
 	}
 
 	return fields
-}
-
-// BuildQuerySQL creates a simple SELECT query using all fields tagged when
-// parsing the structure in NewMagicTable
-func (t *MagicTable) BuildQuerySQL(where string) string {
-	var format = "SELECT %s FROM %s%s"
-	var selectFieldList = strings.Join(t.FieldNames(), ",")
-	var whereClause string
-	if where != "" {
-		whereClause = " WHERE " + where
-	}
-
-	return fmt.Sprintf(format, selectFieldList, t.name, whereClause)
 }

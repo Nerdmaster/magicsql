@@ -41,23 +41,35 @@ func TestFindAll(t *testing.T) {
 
 	db.RegisterTable("foos", newFoo)
 	var op = db.Operation()
-	var fooList = op.FindAll("foos", "one = ?", "thing")
+	var fooList []*Foo
+	op.From("foos").Where("one = ?", "thing").SelectAllInto(&fooList)
 	if op.Err() != nil {
 		t.Log(op.Err())
 		t.FailNow()
 	}
 	assert.Equal(1, len(fooList), "Retrieved one Foo", t)
-	var foo = fooList[0].(*Foo)
+	var foo = fooList[0]
 	assert.Equal("thing", foo.ONE, "Retrieved valid Foo object", t)
 	assert.Equal(5, foo.TwO, "Retrieved valid Foo object", t)
 	assert.Equal(false, foo.Three, "Retrieved valid Foo object", t)
 	assert.Equal(7, foo.Four, "Retrieved valid Foo object", t)
 
-	fooList = op.FindAll("foos", "four = ?", 4)
+	fooList = nil
+	op.From("foos").Where("four = ?", 4).SelectAllInto(&fooList)
 	assert.Equal(2, len(fooList), "Retrieved two Foos", t)
-	var foo0 = fooList[0].(*Foo)
-	var foo1 = fooList[1].(*Foo)
+	var foo0 = fooList[0]
+	var foo1 = fooList[1]
 
 	assert.Equal("one", foo0.ONE, "foo0.ONE", t)
 	assert.Equal("sploop", foo1.ONE, "foo1.ONE", t)
+}
+
+func TestFindAllUnregistered(t *testing.T) {
+	var db = getdb()
+	var op = db.Operation()
+	var fooList []*Foo
+	op.From("foos").Where("one = ?", "thing").SelectAllInto(&fooList)
+	assert.True(op.Err() != nil, "Operation should have an error", t)
+	assert.Equal("table foos not registered", op.Err().Error(), "Error message is correct", t)
+	assert.Equal(0, len(fooList), "fooList is empty", t)
 }

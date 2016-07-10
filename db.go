@@ -160,34 +160,25 @@ func (op *Operation) Begin() *Tx {
 	return &Tx{tx, op}
 }
 
-// FindAllRows runs a select query with the given where clause and bound args,
-// returning a wrapped Rows object
-func (op *Operation) FindAllRows(tableName, where string, args ...interface{}) *Rows {
+// From starts a scoped SQL chain for firing off a SELECT against the given
+// table, allowing things like this:
+//
+//     operation.From("people").Where("city = ?", varCity).SelectAllInto(peopleSlice)
+//     var rows = operation.From("people").Limit(10).SelectAllRows()
+//
+// A scope can be passed around, but right now its capabilities are extremely
+// limited, and I don't plan to make this particularly impressive.
+func (op *Operation) From(tableName string) *Select {
+	var emptySelect = &Select{parent: op}
 	if op.Err() != nil {
-		return &Rows{nil, op}
+		return emptySelect
 	}
 
 	var t = op.parent.findTableByName(tableName)
 	if t == nil {
 		op.SetErr(fmt.Errorf("table %s not registered", tableName))
-		return &Rows{nil, op}
+		return emptySelect
 	}
 
-	var sql = t.BuildQuerySQL(where)
-	var stmt = op.Prepare(sql)
-	return stmt.Query(args...)
-}
-
-// FindAll runs a select query with the given where clause and bound args,
-// returning a slice of generated objects
-func (op *Operation) FindAll(tableName, where string, args ...interface{}) []interface{} {
-	var rows = op.FindAllRows(tableName, where, args...)
-	var t = op.parent.findTableByName(tableName)
-	var data []interface{}
-	for rows.Next() {
-		var obj = t.generator()
-		rows.Scan(t.ScanStruct(obj)...)
-		data = append(data, obj)
-	}
-	return data
+	return newSelect(op, t)
 }

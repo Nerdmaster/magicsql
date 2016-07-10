@@ -26,13 +26,6 @@ func TestQueryFields(t *testing.T) {
 	assert.Equal(4, len(table.sqlFields), "THERE ARE FOUR LIGHTS!  Er, fields....", t)
 }
 
-func TestSQLBuilder(t *testing.T) {
-	var table = NewMagicTable("foos", newFoo)
-	var expected = "SELECT one,two,tree,four FROM foos WHERE x = ?"
-	var actual = table.BuildQuerySQL("x = ?")
-	assert.Equal(expected, actual, "SQL builder for Title", t)
-}
-
 func TestScanStruct(t *testing.T) {
 	var table = NewMagicTable("foos", newFoo)
 	var foo = &Foo{ONE: "blargh"}
