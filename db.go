@@ -49,6 +49,11 @@ func (db *DB) DataSource() *sql.DB {
 
 // RegisterTable registers a table structure using NewMagicTable, then stores
 // the table for lookup in an Operation's helper functions
+//
+// The structure returned by the generator must have tags for explicit table
+// names, or else a lowercased version of the field name will be inferred.  Tag
+// names must be in the form `sql:"field_name"`.  A field name of "-" tells the
+// package to skip that field.  Non-exported fields are skipped.
 func (db *DB) RegisterTable(tableName string, generator func() interface{}) *magicTable {
 	var t = NewMagicTable(tableName, generator)
 

@@ -24,11 +24,6 @@ type magicTable struct {
 // function which simply returns the type to be used with mapping sql to data.
 // It must be safe to run the generator immediately in order to read its
 // structure.
-//
-// The structure returned by the generator must have tags for explicit table
-// names, or else a lowercased version of the field name will be inferred.  Tag
-// names must be in the form `sql:"field_name"`.  A field name of "-" tells the
-// package to skip that field.  Non-exported fields are skipped.
 func NewMagicTable(tableName string, generator func() interface{}) *magicTable {
 	var t = &magicTable{generator: generator, name: tableName}
 	t.reflect()
