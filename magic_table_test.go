@@ -8,10 +8,15 @@ import (
 )
 
 type Foo struct {
+	// ONE turns into "one" for field name, as we auto-lowercase anything not tagged
 	ONE   string
+	// TwO is the primary key, but not explicitly given a field name, so it'll be "two"
 	TwO   int `sql:",primary"`
+	// Three is explicitly set to "tree"
 	Three bool `sql:"tree"`
+	// Four is just lowercased to "four"
 	Four  int
+	// Five is explicitly skipped
 	Five  int `sql:"-"`
 	six   string
 }
