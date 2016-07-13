@@ -76,8 +76,6 @@ func (s Select) SelectAllRows() *Rows {
 //
 //    var sl []Thing
 //    op.From("table").SelectAllInto(&sl)
-//
-// http://grokbase.com/t/gg/golang-nuts/1448xynzvc/go-nuts-reflect-append-to-slice
 func (s Select) SelectAllInto(ptr interface{}) {
 	var rows = s.SelectAllRows()
 	var slice = reflect.ValueOf(ptr).Elem()
