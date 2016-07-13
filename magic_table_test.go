@@ -46,7 +46,26 @@ func TestInsertSQL(t *testing.T) {
 	assert.Equal("INSERT INTO foos (one,tree,four) VALUES (?,?,?)", table.InsertSQL(), "Insert SQL", t)
 }
 
+func TestInsertArgs(t *testing.T) {
+	var table = NewMagicTable("foos", newFoo)
+	var foo = &Foo{ONE: "blargh"}
+	var save = table.InsertArgs(foo)
+	assert.Equal(foo.ONE, *save[0].(*string), "Arg 1 is Foo.ONE", t)
+	assert.Equal(foo.Three, *save[1].(*bool), "Arg 2 is Foo.Three since Foo.TwO is the primary key", t)
+	assert.Equal(foo.Four, *save[2].(*int), "Arg 3 is Foo.Four", t)
+}
+
 func TestUpdateSQL(t *testing.T) {
 	var table = NewMagicTable("foos", newFoo)
 	assert.Equal("UPDATE foos SET one = ?,tree = ?,four = ? WHERE two = ?", table.UpdateSQL(), "Update SQL", t)
+}
+
+func TestUpdateArgs(t *testing.T) {
+	var table = NewMagicTable("foos", newFoo)
+	var foo = &Foo{ONE: "blargh"}
+	var save = table.UpdateArgs(foo)
+	assert.Equal(foo.ONE, *save[0].(*string), "Arg 1 is Foo.ONE", t)
+	assert.Equal(foo.Three, *save[1].(*bool), "Arg 2 is Foo.Three since Foo.TwO is the primary key", t)
+	assert.Equal(foo.Four, *save[2].(*int), "Arg 3 is Foo.Four", t)
+	assert.Equal(foo.TwO, *save[3].(*int), "Arg 4 is Foo.TwO (for the where clause at the end)", t)
 }

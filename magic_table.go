@@ -119,6 +119,23 @@ func (t *magicTable) InsertSQL() string {
 	return fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)", t.name, fields, placeholders)
 }
 
+// InsertArgs sets up and returns an array suitable for passing to an SQL Exec
+// call for doing an insert
+func (t *magicTable) InsertArgs(source interface{}) []interface{} {
+	var save []interface{}
+	var rVal = reflect.ValueOf(source).Elem()
+
+	for _, bf := range t.sqlFields {
+		if bf == t.primaryKey {
+			continue
+		}
+		var vf = rVal.FieldByName(bf.Field.Name)
+		save = append(save, vf.Addr().Interface())
+	}
+
+	return save
+}
+
 // UpdateSQL returns the SQL string for updating a record in this table.
 // Returns an empty string if there's no primary key.
 func (t *magicTable) UpdateSQL() string {
@@ -136,4 +153,26 @@ func (t *magicTable) UpdateSQL() string {
 	var sets = strings.Join(setList, ",")
 
 	return fmt.Sprintf("UPDATE %s SET %s WHERE %s = ?", t.name, sets, t.primaryKey.Name)
+}
+
+// UpdateArgs sets up and returns an array suitable for passing to an SQL Exec
+// call for doing an update.  Returns nil if there's no primary key.
+func (t *magicTable) UpdateArgs(source interface{}) []interface{} {
+	if t.primaryKey == nil {
+		return nil
+	}
+
+	var save []interface{}
+	var rVal = reflect.ValueOf(source).Elem()
+
+	for _, bf := range t.sqlFields {
+		if bf == t.primaryKey {
+			continue
+		}
+		var vf = rVal.FieldByName(bf.Field.Name)
+		save = append(save, vf.Addr().Interface())
+	}
+
+	save = append(save, rVal.FieldByName(t.primaryKey.Field.Name).Addr().Interface())
+	return save
 }
