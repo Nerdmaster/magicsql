@@ -1,6 +1,7 @@
 package magicsql
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 )
@@ -75,6 +76,20 @@ func (t *magicTable) FieldNames() []string {
 	return names
 }
 
+// SaveFieldNames returns all fields' names except primary key (if one exists)
+// to ease insert and update statements where the primary key isn't part of
+// what's saved
+func (t *magicTable) SaveFieldNames() []string {
+	var names []string
+	for _, bf := range t.sqlFields {
+		if bf == t.primaryKey {
+			continue
+		}
+		names = append(names, bf.Name)
+	}
+	return names
+}
+
 // ScanStruct sets up a structure suitable for calling Scan to populate dest
 func (t *magicTable) ScanStruct(dest interface{}) []interface{} {
 	var fields = make([]interface{}, len(t.sqlFields))
@@ -85,4 +100,40 @@ func (t *magicTable) ScanStruct(dest interface{}) []interface{} {
 	}
 
 	return fields
+}
+
+// InsertSQL returns the SQL string for inserting a record into this table.
+// This makes the assumption that the primary key is not being set, so it isn't
+// part of the fields list of values placeholder.
+func (t *magicTable) InsertSQL() string {
+	var qList []string
+	for _, bf := range t.sqlFields {
+		if bf == t.primaryKey {
+			continue
+		}
+		qList = append(qList, "?")
+	}
+
+	var fields = strings.Join(t.SaveFieldNames(), ",")
+	var placeholders = strings.Join(qList, ",")
+	return fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)", t.name, fields, placeholders)
+}
+
+// UpdateSQL returns the SQL string for updating a record in this table.
+// Returns an empty string if there's no primary key.
+func (t *magicTable) UpdateSQL() string {
+	if t.primaryKey == nil {
+		return ""
+	}
+
+	var setList []string
+	for _, bf := range t.sqlFields {
+		if bf == t.primaryKey {
+			continue
+		}
+		setList = append(setList, fmt.Sprintf("%s = ?", bf.Name))
+	}
+	var sets = strings.Join(setList, ",")
+
+	return fmt.Sprintf("UPDATE %s SET %s WHERE %s = ?", t.name, sets, t.primaryKey.Name)
 }
