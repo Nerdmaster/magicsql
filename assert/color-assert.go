@@ -33,6 +33,7 @@ func success(caller *Caller, message string, t *testing.T) {
 func failure(caller *Caller, message string, t *testing.T) {
 	t.Errorf("\033[31;1mnot ok\033[0m    %s(): %s\n", caller.Name, message)
 	t.Errorf("          - %s:%d\n", caller.Filename, caller.Line)
+	t.FailNow()
 }
 
 func True(expression bool, message string, t *testing.T) {
