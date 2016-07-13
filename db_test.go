@@ -13,14 +13,13 @@ import (
 func getdb() *DB {
 	var db, err = Open("sqlite3", "./test.db")
 	var sqlStmt = `
-		create table if not exists foos (
-			id integer not null primary key,
+		drop table if exists foos;
+		create table foos (
 			one text,
-			two int,
+			two INTEGER PRIMARY KEY AUTOINCREMENT,
 			tree bool,
 			four int
 		);
-		delete from foos;
 	`
 	_, err = db.DataSource().Exec(sqlStmt)
 	if err != nil {
@@ -37,7 +36,7 @@ func TestSelectAllInto(t *testing.T) {
 	source.Exec("INSERT INTO foos (one,two,tree,four) VALUES (?, ?, ?, ?)", "one", 2, true, 4)
 	source.Exec("INSERT INTO foos (one,two,tree,four) VALUES (?, ?, ?, ?)", "thing", 5, false, 7)
 	source.Exec("INSERT INTO foos (one,two,tree,four) VALUES (?, ?, ?, ?)", "blargh", 1, true, 5)
-	source.Exec("INSERT INTO foos (one,two,tree,four) VALUES (?, ?, ?, ?)", "sploop", 2, true, 4)
+	source.Exec("INSERT INTO foos (one,two,tree,four) VALUES (?, ?, ?, ?)", "sploop", 4, true, 4)
 
 	db.RegisterTable("foos", newFoo)
 	var op = db.Operation()
