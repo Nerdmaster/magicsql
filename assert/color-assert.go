@@ -2,7 +2,6 @@ package assert
 
 import (
 	"fmt"
-	"reflect"
 	"runtime"
 	"testing"
 )
@@ -53,15 +52,6 @@ func Equal(expected, actual interface{}, message string, t *testing.T) {
 	caller := getCallerName(1)
 	if expected != actual {
 		failure(caller, fmt.Sprintf("Expected %#v, but got %#v - %s", expected, actual, message), t)
-		return
-	}
-	success(caller, message, t)
-}
-
-func Nil(value interface{}, message string, t *testing.T) {
-	caller := getCallerName(1)
-	if reflect.ValueOf(value).Elem().IsValid() {
-		failure(caller, fmt.Sprintf("Expected %#v to be nil - %s", value, message), t)
 		return
 	}
 	success(caller, message, t)
