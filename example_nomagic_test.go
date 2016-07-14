@@ -41,10 +41,10 @@ func Example_withoutMagic() {
 	// Create a transaction because hey, why not?
 	var tx = op.Begin()
 	var stmt = tx.Prepare("INSERT INTO foos (one,two,tree,four) VALUES (?, ?, ?, ?)")
-	stmt.Exec("one", 2, true, 4);
-	stmt.Exec("thing", 5, false, 7);
-	stmt.Exec("blargh", 1, true, 5);
-	stmt.Exec("sploop", 2, true, 4);
+	stmt.Exec("one", 2, true, 4)
+	stmt.Exec("thing", 5, false, 7)
+	stmt.Exec("blargh", 1, true, 5)
+	stmt.Exec("sploop", 2, true, 4)
 
 	// Instead of calling commit/rollback, we let the transaction figure it out
 	// based on its error state
