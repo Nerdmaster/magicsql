@@ -198,9 +198,8 @@ func (op *Operation) From(tableName string) *Select {
 }
 
 // Save creates an INSERT or UPDATE statement for the given object based on
-// whether its primary key is the same as the default for a newly-generated
-// object.  Stores any errors the database returns, and fails if obj is of an
-// unregistered type or has no primary key defined.
+// whether its primary key is zero.  Stores any errors the database returns,
+// and fails if obj is of an unregistered type or has no primary key defined.
 func (op *Operation) Save(obj interface{}) *Result {
 	var emptyResult = &Result{nil, op}
 
@@ -220,5 +219,15 @@ func (op *Operation) Save(obj interface{}) *Result {
 		return emptyResult
 	}
 
-	return nil
+	// Check for object's primary key field being zero
+	var rVal = reflect.ValueOf(obj).Elem()
+	var pkValField = rVal.FieldByName(t.primaryKey.Field.Name)
+	// TODO: check type when reading tags so we can handle non-int PKs earlier
+	if pkValField.Int() == 0 {
+		var res = op.Exec(t.InsertSQL(), t.InsertArgs(obj)...)
+		pkValField.SetInt(res.LastInsertId())
+		return res
+	}
+
+	return op.Exec(t.UpdateSQL(), t.UpdateArgs(obj)...)
 }
