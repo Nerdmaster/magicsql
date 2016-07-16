@@ -2,6 +2,7 @@ package magicsql_test
 
 import (
 	"fmt"
+
 	"github.com/Nerdmaster/magicsql"
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -31,10 +32,10 @@ func Example_withoutMagic() {
 	// Start an operation
 	var op = db.Operation()
 
-	var count = 0
-	var rows = op.Query("SELECT one,two,tree,four FROM foos WHERE two > 1", true)
+	var count = -1
+	var rows = op.Query("SELECT count(*) FROM foos")
 	for rows.Next() {
-		count++
+		rows.Scan(&count)
 	}
 	fmt.Printf("Row count at start: %d\n", count)
 
@@ -50,6 +51,32 @@ func Example_withoutMagic() {
 	// based on its error state
 	op.EndTransaction()
 
+	// Create a transaction and force it to fail
+	op.BeginTransaction()
+	stmt = op.Prepare("INSERT INTO foos (one,two,tree,four) VALUES (?, ?, ?, ?)")
+	stmt.Exec("one+", 2, true, 4)
+	stmt.Exec("thing+", 5, false, 7)
+
+	rows = op.Query("SELECT COUNT(*) FROM foos")
+	count = -1
+	for rows.Next() {
+		rows.Scan(&count)
+	}
+	fmt.Println("Count in transaction:", count)
+
+	op.SetErr(fmt.Errorf("forcing rollback"))
+	op.EndTransaction()
+
+	// Reset the error state so we can continue working
+	op.Reset()
+
+	rows = op.Query("SELECT COUNT(*) FROM foos")
+	count = -1
+	for rows.Next() {
+		rows.Scan(&count)
+	}
+	fmt.Println("Count after forced rollback:", count)
+
 	rows = op.Query("SELECT one,two,tree,four FROM foos WHERE two > 1", true)
 	var one string
 	var two, four int
@@ -61,6 +88,8 @@ func Example_withoutMagic() {
 
 	// Output:
 	// Row count at start: 0
+	// Count in transaction: 6
+	// Count after forced rollback: 4
 	// one: one, two: 2, tree: true, four: 4
 	// one: thing, two: 5, tree: false, four: 7
 	// one: sploop, two: 2, tree: true, four: 4
