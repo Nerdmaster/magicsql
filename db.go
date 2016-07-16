@@ -95,5 +95,5 @@ func (db *DB) findTableByType(t reflect.Type) *magicTable {
 // due to the possibility of Operation.Err() returning an error from a
 // different goroutine than the one doing the checking.
 func (db *DB) Operation() *Operation {
-	return &Operation{parent: db, db: db.db}
+	return NewOperation(db)
 }

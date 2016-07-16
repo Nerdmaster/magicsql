@@ -2,9 +2,18 @@ package magicsql
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"reflect"
 )
+
+// Querier defines an interface for top-level sql types that can run SQL and
+// prepare statements
+type Querier interface {
+	Query(string, ...interface {}) (*sql.Rows, error)
+	Exec(string, ...interface {}) (sql.Result, error)
+	Prepare(string) (*sql.Stmt, error)
+}
 
 // Operation represents a short-lived single-purpose combination of database
 // calls.  On the first failure, its internal error is set, which all
@@ -12,10 +21,26 @@ import (
 // refuse to perform any functions once an error has occurred, making it safe
 // to perform a chain of related database calls and only check for an error
 // when it makes sense.
+//
+// When a transaction is started, the operation will route all database calls
+// through the transaction instead of the global database handler.  At this
+// time, only one transaction at a time is supported (i.e., no nesting
+// transactions).
 type Operation struct {
 	parent *DB
-	db     *sql.DB
 	err    error
+	tx     *sql.Tx
+	q      Querier
+}
+
+// NewOperation creates an operation in its default state: its parent is the
+// passed-in DB instance, and it defaults to using direct database calls until
+// a transaction is started.
+func NewOperation(db *DB) *Operation {
+	var o = &Operation{parent: db}
+	o.q = o.parent.db
+
+	return o
 }
 
 // Err returns the *first* error which occurred on any database call owned by the Operation
@@ -40,7 +65,7 @@ func (op *Operation) Query(query string, args ...interface{}) *Rows {
 		return &Rows{nil, op}
 	}
 
-	var r, err = op.db.Query(query, args...)
+	var r, err = op.q.Query(query, args...)
 	op.SetErr(err)
 	return &Rows{r, op}
 }
@@ -51,7 +76,7 @@ func (op *Operation) Exec(query string, args ...interface{}) *Result {
 		return &Result{nil, op}
 	}
 
-	var r, err = op.db.Exec(query, args...)
+	var r, err = op.q.Exec(query, args...)
 	op.SetErr(err)
 	return &Result{r, op}
 }
@@ -62,23 +87,52 @@ func (op *Operation) Prepare(query string) *Stmt {
 		return &Stmt{nil, op}
 	}
 
-	var st, err = op.db.Prepare(query)
+	var st, err = op.q.Prepare(query)
 	op.SetErr(err)
 	return &Stmt{st, op}
 }
 
-// Begin wraps sql's Begin and returns a wrapped Tx.  When the transaction is
-// complete, instead of manually rolling back or committing, simply call
-// tx.Done() and it will rollback / commit based on the error state.  If you
-// need to force a rollback, set an error manually with Operation.SetErr().
-func (op *Operation) Begin() *Tx {
+// BeginTransaction wraps sql's Begin and uses a wrapped sql.Tx to dispatch
+// Query, Exec, and Prepare calls.  When the transaction is complete, instead
+// of manually rolling back or committing, simply call op.EndTransaction() and
+// it will rollback / commit based on the error state.  If you need to force a
+// rollback, set an error manually with Operation.SetErr().
+//
+// If a transaction is started while one is already in progress, the operation
+// gets into an error state (i.e., nested transactions are not supported).
+func (op *Operation) BeginTransaction() {
 	if op.Err() != nil {
-		return &Tx{nil, op}
+		return
 	}
 
-	var tx, err = op.db.Begin()
+	if op.tx != nil {
+		op.SetErr(errors.New("cannot nest transactions"))
+		return
+	}
+
+	var tx, err = op.parent.db.Begin()
+	op.tx = tx
 	op.SetErr(err)
-	return &Tx{tx, op}
+	op.q = tx
+}
+
+// EndTransaction commits the transaction if no errors occurred, or rolls back
+// if there was an error
+func (op *Operation) EndTransaction() {
+	// If there was never a transaction due to errors, this could happen and we
+	// don't want a panic
+	if op.tx == nil {
+		return
+	}
+
+	if op.Err() != nil {
+		op.tx.Rollback()
+	} else {
+		op.SetErr(op.tx.Commit())
+	}
+
+	op.tx = nil
+	op.q = op.parent.db
 }
 
 // From starts a scoped SQL chain for firing off a SELECT against the given

@@ -9,7 +9,7 @@ import (
 )
 
 func TestSQL(t *testing.T) {
-	var op = &Operation{parent: nil, db: nil}
+	var op = &Operation{}
 	var table = NewMagicTable("foos", newFoo)
 	var s = newSelect(op, table)
 	assert.Equal("SELECT one,two,tree,four FROM foos", s.SQL(), "SQL when there's no where/offset/limit", t)

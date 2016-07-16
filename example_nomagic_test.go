@@ -39,8 +39,8 @@ func Example_withoutMagic() {
 	fmt.Printf("Row count at start: %d\n", count)
 
 	// Create a transaction because hey, why not?
-	var tx = op.Begin()
-	var stmt = tx.Prepare("INSERT INTO foos (one,two,tree,four) VALUES (?, ?, ?, ?)")
+	op.BeginTransaction()
+	var stmt = op.Prepare("INSERT INTO foos (one,two,tree,four) VALUES (?, ?, ?, ?)")
 	stmt.Exec("one", 2, true, 4)
 	stmt.Exec("thing", 5, false, 7)
 	stmt.Exec("blargh", 1, true, 5)
@@ -48,7 +48,7 @@ func Example_withoutMagic() {
 
 	// Instead of calling commit/rollback, we let the transaction figure it out
 	// based on its error state
-	tx.Done()
+	op.EndTransaction()
 
 	rows = op.Query("SELECT one,two,tree,four FROM foos WHERE two > 1", true)
 	var one string
