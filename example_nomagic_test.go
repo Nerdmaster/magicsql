@@ -7,7 +7,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func Example_withoutMagic() {
+func getdb() *magicsql.DB {
 	// Set up a simple sqlite database
 	var db, err = magicsql.Open("sqlite3", "./test.db")
 	if err != nil {
@@ -29,7 +29,12 @@ func Example_withoutMagic() {
 		panic(err)
 	}
 
+	return db
+}
+
+func Example_withoutMagic() {
 	// Start an operation
+	var db = getdb()
 	var op = db.Operation()
 
 	var count = -1
