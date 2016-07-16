@@ -32,6 +32,8 @@ func getdb() *magicsql.DB {
 	return db
 }
 
+// This example showcases how you can use magicsql to simplify database access
+// without relying on magically generated SQL or structure registration
 func Example_withoutMagic() {
 	// Start an operation
 	var db = getdb()

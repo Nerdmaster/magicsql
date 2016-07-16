@@ -30,8 +30,8 @@ func newFoo() interface{} {
 	return &Foo{Five: 5, six: "six"}
 }
 
-// Example_withMagic showcases some of the ways SQL can be magically generated
-// to populate registered structures
+// This example showcases some of the ways SQL can be magically generated to
+// populate registered structures
 func Example_withMagic() {
 	// Set up a simple sqlite database
 	var db, err = magicsql.Open("sqlite3", "./test.db")
