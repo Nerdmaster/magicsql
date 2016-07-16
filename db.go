@@ -9,6 +9,11 @@ import (
 	"sync"
 )
 
+type errorable interface {
+	Err() error
+	SetErr(error)
+}
+
 // DB wraps an sql.DB, providing the Operation spawner for deferred-error
 // database operations.  Like sql.DB, this DB type is meant to live more or
 // less globally and be a long-living object.

@@ -18,11 +18,6 @@ type Operation struct {
 	err    error
 }
 
-type errorable interface {
-	Err() error
-	SetErr(error)
-}
-
 // Err returns the *first* error which occurred on any database call owned by the Operation
 func (op *Operation) Err() error {
 	return op.err
