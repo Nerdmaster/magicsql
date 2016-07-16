@@ -39,37 +39,32 @@ func Example_withMagic() {
 		panic(err)
 	}
 
-	var sqlStmt = `
-		DROP TABLE IF EXISTS foos;
-		CREATE TABLE foos (
-			id   INTEGER NOT NULL PRIMARY KEY,
-			one  TEXT,
-			two  INT,
-			tree BOOL,
-			four INT
-		);
-		INSERT INTO foos (one,two,tree,four) VALUES ("one", 2, 1, 4);
-		INSERT INTO foos (one,two,tree,four) VALUES ("thing", 5, 0, 7);
-		INSERT INTO foos (one,two,tree,four) VALUES ("blargh", 1, 1, 5);
-		INSERT INTO foos (one,two,tree,four) VALUES ("sploop", 2, 1, 4);
-	`
-
-	_, err = db.DataSource().Exec(sqlStmt)
-	if err != nil {
-		panic(err)
-	}
-
 	// Tie the "foos" table to the Foo type
 	db.RegisterTable("foos", newFoo)
 	var op = db.Operation()
 
+	// Create table schema
+	op.Exec("DROP TABLE IF EXISTS foos")
+	op.Exec("CREATE TABLE foos (id INTEGER NOT NULL PRIMARY KEY, one TEXT, two INT, tree BOOL, four INT)")
+
+	// Insert four rows
+	op.BeginTransaction()
+	op.Save(&Foo{ONE: "one", TwO: 2, Three: true, Four: 4})
+	op.Save(&Foo{ONE: "thing", TwO: 5, Three: false, Four: 7})
+	op.Save(&Foo{ONE: "blargh", TwO: 1, Three: true, Four: 5})
+	op.Save(&Foo{ONE: "sploop", TwO: 2, Three: true, Four: 4})
+	op.EndTransaction()
+	if op.Err() != nil {
+		panic(op.Err())
+	}
+
 	var fooList []*Foo
-	op.From("foos").Where("two > 1").Limit(2).SelectAllInto(&fooList)
+	op.From("foos").Where("two > 1").Limit(2).Offset(1).SelectAllInto(&fooList)
 
 	for _, f := range fooList {
 		fmt.Printf("Foo {%d,%s,%d,%#v,%d,%d,%s}\n", f.ID, f.ONE, f.TwO, f.Three, f.Four, f.Five, f.six)
 	}
 	// Output:
-	// Foo {1,one,2,true,4,5,six}
 	// Foo {2,thing,5,false,7,5,six}
+	// Foo {4,sploop,2,true,4,5,six}
 }
