@@ -1,3 +1,5 @@
+.PHONY: all test format
+
 all:
 	go build
 
