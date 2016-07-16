@@ -92,6 +92,11 @@ func (op *Operation) Prepare(query string) *Stmt {
 	return &Stmt{st, op}
 }
 
+// Reset clears the error if any is present
+func (op *Operation) Reset() {
+	op.err = nil
+}
+
 // BeginTransaction wraps sql's Begin and uses a wrapped sql.Tx to dispatch
 // Query, Exec, and Prepare calls.  When the transaction is complete, instead
 // of manually rolling back or committing, simply call op.EndTransaction() and
