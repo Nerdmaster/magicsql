@@ -14,6 +14,10 @@ type errorable interface {
 	SetErr(error)
 }
 
+// ConfigTags is a string-to-string map for treating untagged structures as if
+// they were tagged at runtime
+type ConfigTags map[string]string
+
 // DB wraps an sql.DB, providing the Operation spawner for deferred-error
 // database operations.  Like sql.DB, this DB type is meant to live more or
 // less globally and be a long-living object.
@@ -62,7 +66,29 @@ func (db *DB) DataSource() *sql.DB {
 // after the field name.  e.g., `sql:"field_name,primary"`.  Non-exported
 // fields are skipped.
 func (db *DB) RegisterTable(tableName string, generator func() interface{}) {
-	var t = newMagicTable(tableName, generator)
+	db.RegisterTableConfig(tableName, generator, nil)
+}
+
+// RegisterTableConfig allows for registering a type that isn't tagged by
+// passing in a ConfigTags structure, which is a map of field name to magicsql
+// tag.  This won't let you expose private data, but it will allow purists to
+// use some of the more advanced pieces of magicsql without muddying up their
+// data structures with unnecessary tags.
+//
+// The mapped tags don't need to be wrapped, since they're being explicitly
+// configured.  For example, if you would have tagged like this:
+//     SomeField int `sql:"some_field,primary"`
+//
+// You can pass a ConfigTag of ConfigTag{"SomeField": "some_field,primary"}
+//
+// Note that just like the field tag approach, you have to account for every
+// field, even if that just means setting many fields to "-" so magicsql
+// ignores them.  If you're trying to configure a third-party type, make sure
+// you remember this if you update and their structures change.
+func (db *DB) RegisterTableConfig(tableName string, generator func() interface{}, conf ConfigTags) {
+	// TODO: allow registering get/set functions as well as fields here to allow
+	// for far more power for structures which don't expose data.
+	var t = newMagicTable(tableName, generator, conf)
 
 	db.m.Lock()
 	defer db.m.Unlock()

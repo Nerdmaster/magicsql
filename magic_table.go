@@ -25,16 +25,18 @@ type magicTable struct {
 // data for the given generator.  The generator must be a zero-argument
 // function which simply returns the type to be used with mapping sql to data.
 // It must be safe to run the generator immediately in order to read its
-// structure.
-func newMagicTable(tableName string, generator func() interface{}) *magicTable {
+// structure.  If conf is nil, the generator's object's tags are used to
+// determine field mappings, otherwise the conf data is used.
+func newMagicTable(tableName string, generator func() interface{}, conf ConfigTags) *magicTable {
 	var t = &magicTable{generator: generator, name: tableName}
-	t.reflect()
+	t.reflect(conf)
 	return t
 }
 
 // reflect traverses the wrapped structure to figure out which fields map to
-// database table fields and how
-func (t *magicTable) reflect() {
+// database table fields and how.  If conf is non-nil, that is used in place
+// of struct tags.
+func (t *magicTable) reflect(conf ConfigTags) {
 	var obj = t.generator()
 	t.RType = reflect.TypeOf(obj).Elem()
 	var rVal = reflect.ValueOf(obj).Elem()
@@ -46,7 +48,13 @@ func (t *magicTable) reflect() {
 			continue
 		}
 
-		var tag = sf.Tag.Get("sql")
+		var tag string
+		if conf == nil {
+			tag = sf.Tag.Get("sql")
+		} else {
+			tag = conf[sf.Name]
+		}
+
 		if tag == "-" {
 			continue
 		}
