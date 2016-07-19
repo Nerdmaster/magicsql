@@ -51,7 +51,7 @@ func (db *DB) DataSource() *sql.DB {
 	return db.db
 }
 
-// RegisterTable registers a table structure using NewMagicTable, then stores
+// RegisterTable registers a table structure using newMagicTable, then stores
 // the table for lookup in an Operation's helper functions
 //
 // The structure returned by the generator must have tags for explicit table
@@ -62,7 +62,7 @@ func (db *DB) DataSource() *sql.DB {
 // after the field name.  e.g., `sql:"field_name,primary"`.  Non-exported
 // fields are skipped.
 func (db *DB) RegisterTable(tableName string, generator func() interface{}) {
-	var t = NewMagicTable(tableName, generator)
+	var t = newMagicTable(tableName, generator)
 
 	db.m.Lock()
 	defer db.m.Unlock()

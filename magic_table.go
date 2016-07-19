@@ -21,12 +21,12 @@ type magicTable struct {
 	primaryKey *boundField
 }
 
-// NewMagicTable creates a table structure with some pre-computed reflection
+// newMagicTable creates a table structure with some pre-computed reflection
 // data for the given generator.  The generator must be a zero-argument
 // function which simply returns the type to be used with mapping sql to data.
 // It must be safe to run the generator immediately in order to read its
 // structure.
-func NewMagicTable(tableName string, generator func() interface{}) *magicTable {
+func newMagicTable(tableName string, generator func() interface{}) *magicTable {
 	var t = &magicTable{generator: generator, name: tableName}
 	t.reflect()
 	return t
@@ -67,7 +67,7 @@ func (t *magicTable) reflect() {
 }
 
 // FieldNames returns all known table field names based on the tag parsing done
-// in NewMagicTable
+// in newMagicTable
 func (t *magicTable) FieldNames() []string {
 	var names []string
 	for _, bf := range t.sqlFields {
