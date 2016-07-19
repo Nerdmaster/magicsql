@@ -10,8 +10,8 @@ import (
 // Querier defines an interface for top-level sql types that can run SQL and
 // prepare statements
 type Querier interface {
-	Query(string, ...interface {}) (*sql.Rows, error)
-	Exec(string, ...interface {}) (sql.Result, error)
+	Query(string, ...interface{}) (*sql.Rows, error)
+	Exec(string, ...interface{}) (sql.Result, error)
 	Prepare(string) (*sql.Stmt, error)
 }
 
