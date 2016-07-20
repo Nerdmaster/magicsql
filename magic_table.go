@@ -62,7 +62,7 @@ func (t *magicTable) reflect(conf ConfigTags) {
 		var parts = strings.Split(tag, ",")
 		var sqlf = parts[0]
 		if sqlf == "" {
-			sqlf = strings.ToLower(sf.Name)
+			sqlf = toUnderscore(sf.Name)
 		}
 
 		var bf = &boundField{sqlf, sf}

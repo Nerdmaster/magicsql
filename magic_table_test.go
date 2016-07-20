@@ -8,12 +8,13 @@ import (
 )
 
 type Foo struct {
-	ONE   string
-	TwO   int  `sql:",primary"`
-	Three bool `sql:"tree"`
-	Four  int
-	Five  int `sql:"-"`
-	six   string
+	ONE           string
+	TwO           int  `sql:"two,primary"`
+	Three         bool `sql:"tree"`
+	Four          int
+	FourPointFive int
+	Five          int `sql:"-"`
+	six           string
 }
 
 func newFoo() interface{} {
@@ -26,14 +27,14 @@ var nmt = func(t string, g func() interface{}) *magicTable {
 
 func TestQueryFields(t *testing.T) {
 	var table = nmt("foos", newFoo)
-	assert.Equal("one,two,tree,four", strings.Join(table.FieldNames(), ","), "Full field list", t)
-	assert.Equal(4, len(table.sqlFields), "THERE ARE FOUR LIGHTS!  Er, fields....", t)
+	assert.Equal("one,two,tree,four,four_point_five", strings.Join(table.FieldNames(), ","), "Full field list", t)
+	assert.Equal(5, len(table.sqlFields), "THERE ARE FOUR LIGHTS!  Er, five... and fields, not lights....", t)
 }
 
 func TestSaveFieldNames(t *testing.T) {
 	var table = nmt("foos", newFoo)
-	assert.Equal("one,tree,four", strings.Join(table.SaveFieldNames(), ","), "Save field list", t)
-	assert.Equal(3, len(table.SaveFieldNames()), "THERE ARE FOUR LIGHTS!  Er, three.  And fields, not lights.", t)
+	assert.Equal("one,tree,four,four_point_five", strings.Join(table.SaveFieldNames(), ","), "Save field list", t)
+	assert.Equal(4, len(table.SaveFieldNames()), "THERE ARE FOUR LIGHTS!  Er, fields....", t)
 }
 
 func TestScanStruct(t *testing.T) {
@@ -47,7 +48,8 @@ func TestScanStruct(t *testing.T) {
 
 func TestInsertSQL(t *testing.T) {
 	var table = nmt("foos", newFoo)
-	assert.Equal("INSERT INTO foos (one,tree,four) VALUES (?,?,?)", table.InsertSQL(), "Insert SQL", t)
+	var expected = "INSERT INTO foos (one,tree,four,four_point_five) VALUES (?,?,?,?)"
+	assert.Equal(expected, table.InsertSQL(), "Insert SQL", t)
 }
 
 func TestInsertArgs(t *testing.T) {
@@ -57,11 +59,13 @@ func TestInsertArgs(t *testing.T) {
 	assert.Equal(foo.ONE, *save[0].(*string), "Arg 1 is Foo.ONE", t)
 	assert.Equal(foo.Three, *save[1].(*bool), "Arg 2 is Foo.Three since Foo.TwO is the primary key", t)
 	assert.Equal(foo.Four, *save[2].(*int), "Arg 3 is Foo.Four", t)
+	assert.Equal(foo.FourPointFive, *save[3].(*int), "Arg 4 is Foo.FourPointFive", t)
 }
 
 func TestUpdateSQL(t *testing.T) {
 	var table = nmt("foos", newFoo)
-	assert.Equal("UPDATE foos SET one = ?,tree = ?,four = ? WHERE two = ?", table.UpdateSQL(), "Update SQL", t)
+	var expected = "UPDATE foos SET one = ?,tree = ?,four = ?,four_point_five = ? WHERE two = ?"
+	assert.Equal(expected, table.UpdateSQL(), "Update SQL", t)
 }
 
 func TestUpdateArgs(t *testing.T) {
@@ -71,5 +75,6 @@ func TestUpdateArgs(t *testing.T) {
 	assert.Equal(foo.ONE, *save[0].(*string), "Arg 1 is Foo.ONE", t)
 	assert.Equal(foo.Three, *save[1].(*bool), "Arg 2 is Foo.Three since Foo.TwO is the primary key", t)
 	assert.Equal(foo.Four, *save[2].(*int), "Arg 3 is Foo.Four", t)
-	assert.Equal(foo.TwO, *save[3].(*int), "Arg 4 is Foo.TwO (for the where clause at the end)", t)
+	assert.Equal(foo.FourPointFive, *save[3].(*int), "Arg 4 is Foo.FourPointFive", t)
+	assert.Equal(foo.TwO, *save[4].(*int), "Arg 5 is Foo.TwO (for the where clause at the end)", t)
 }

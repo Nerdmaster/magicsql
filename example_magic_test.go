@@ -12,13 +12,14 @@ type Foo struct {
 	ID int `sql:",primary"`
 	// ONE turns into "one" for field name, as we auto-lowercase anything not tagged
 	ONE string
-	// TwO just shows that the field's case is lowercased even when it may have
-	// been camelcase in the structure
-	TwO int
+	// TwO is explicitly set so it doesn't underscorify
+	TwO int `sql:"two"`
 	// Three is explicitly set to "tree"
 	Three bool `sql:"tree"`
 	// Four is just lowercased to "four"
 	Four int
+	// FourPointFive gets turned into underscores
+	FourPointFive int
 	// Five is explicitly skipped
 	Five int `sql:"-"`
 	// six isn't exported, so is implicitly skipped
@@ -45,12 +46,21 @@ func Example_withMagic() {
 
 	// Create table schema
 	op.Exec("DROP TABLE IF EXISTS foos")
-	op.Exec("CREATE TABLE foos (id INTEGER NOT NULL PRIMARY KEY, one TEXT, two INT, tree BOOL, four INT)")
+	op.Exec(`
+		CREATE TABLE foos (
+			id INTEGER NOT NULL PRIMARY KEY,
+			one TEXT,
+			two INT,
+			tree BOOL,
+			four INT,
+			four_point_five INT
+		);
+	`)
 
 	// Insert four rows
 	op.BeginTransaction()
-	op.Save(&Foo{ONE: "one", TwO: 2, Three: true, Four: 4})
-	op.Save(&Foo{ONE: "thing", TwO: 5, Three: false, Four: 7})
+	op.Save(&Foo{ONE: "one", TwO: 2, Three: true, Four: 4, FourPointFive: 9})
+	op.Save(&Foo{ONE: "thing", TwO: 5, Three: false, Four: 7, FourPointFive: -1})
 	op.Save(&Foo{ONE: "blargh", TwO: 1, Three: true, Four: 5})
 	op.Save(&Foo{ONE: "sploop", TwO: 2, Three: true, Four: 4})
 	op.EndTransaction()
@@ -62,9 +72,9 @@ func Example_withMagic() {
 	op.From("foos").Where("two > 1").Limit(2).Offset(1).SelectAllInto(&fooList)
 
 	for _, f := range fooList {
-		fmt.Printf("Foo {%d,%s,%d,%#v,%d,%d,%s}\n", f.ID, f.ONE, f.TwO, f.Three, f.Four, f.Five, f.six)
+		fmt.Printf("Foo {%d,%s,%d,%#v,%d,%d,%d,%s}\n", f.ID, f.ONE, f.TwO, f.Three, f.Four, f.FourPointFive, f.Five, f.six)
 	}
 	// Output:
-	// Foo {2,thing,5,false,7,5,six}
-	// Foo {4,sploop,2,true,4,5,six}
+	// Foo {2,thing,5,false,7,-1,5,six}
+	// Foo {4,sploop,2,true,4,0,5,six}
 }

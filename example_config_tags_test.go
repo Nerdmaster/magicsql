@@ -46,7 +46,15 @@ func Example_configTags() {
 
 	// Create table schema
 	op.Exec("DROP TABLE IF EXISTS foos")
-	op.Exec("CREATE TABLE foos (id INTEGER NOT NULL PRIMARY KEY, one TEXT, two INT, tree BOOL, four INT)")
+	op.Exec(`
+		CREATE TABLE foos (
+			id INTEGER NOT NULL PRIMARY KEY,
+			one TEXT,
+			tw_o INT,
+			tree BOOL,
+			four INT
+		);
+	`)
 
 	// Insert four rows
 	op.BeginTransaction()
@@ -60,7 +68,7 @@ func Example_configTags() {
 	}
 
 	var fooList []*UntaggedFoo
-	op.From("foos").Where("two > 1").Limit(2).Offset(1).SelectAllInto(&fooList)
+	op.From("foos").Where("tw_o > 1").Limit(2).Offset(1).SelectAllInto(&fooList)
 
 	for _, f := range fooList {
 		fmt.Printf("UntaggedFoo {%d,%s,%d,%#v,%d,%d,%s}\n", f.ID, f.ONE, f.TwO, f.Three, f.Four, f.Five, f.six)

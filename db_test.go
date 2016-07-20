@@ -19,7 +19,8 @@ func getdb() *DB {
 			one text,
 			two INTEGER PRIMARY KEY AUTOINCREMENT,
 			tree bool,
-			four int
+			four int,
+			four_point_five int
 		);
 	`
 	_, err = db.DataSource().Exec(sqlStmt)
