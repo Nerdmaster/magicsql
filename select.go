@@ -16,6 +16,7 @@ type Select struct {
 	table     *magicTable
 	where     string
 	whereArgs []interface{}
+	order     string
 	limit     uint64
 	offset    uint64
 }
@@ -43,11 +44,20 @@ func (s Select) Offset(o uint64) Select {
 	return s
 }
 
+// Order sets (or overwrites) the order clause
+func (s Select) Order(o string) Select {
+	s.order = o
+	return s
+}
+
 // SQL returns the raw query this Select represents
 func (s Select) SQL() string {
 	var sql = fmt.Sprintf("SELECT %s FROM %s", strings.Join(s.table.FieldNames(), ","), s.table.name)
 	if s.where != "" {
 		sql += fmt.Sprintf(" WHERE %s", s.where)
+	}
+	if s.order != "" {
+		sql += fmt.Sprintf(" ORDER BY %s", s.order)
 	}
 	if s.limit > 0 {
 		sql += fmt.Sprintf(" LIMIT %d", s.limit)

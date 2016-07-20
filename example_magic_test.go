@@ -69,12 +69,12 @@ func Example_withMagic() {
 	}
 
 	var fooList []*Foo
-	op.From("foos").Where("two > 1").Limit(2).Offset(1).SelectAllInto(&fooList)
+	op.From("foos").Where("two > 1").Limit(2).Offset(1).Order("four_point_five DESC").SelectAllInto(&fooList)
 
 	for _, f := range fooList {
 		fmt.Printf("Foo {%d,%s,%d,%#v,%d,%d,%d,%s}\n", f.ID, f.ONE, f.TwO, f.Three, f.Four, f.FourPointFive, f.Five, f.six)
 	}
 	// Output:
-	// Foo {2,thing,5,false,7,-1,5,six}
 	// Foo {4,sploop,2,true,4,0,5,six}
+	// Foo {2,thing,5,false,7,-1,5,six}
 }
