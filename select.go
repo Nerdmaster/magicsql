@@ -15,7 +15,7 @@ type Select struct {
 	parent    *Operation
 	table     *magicTable
 	where     string
-	WhereArgs []interface{}
+	whereArgs []interface{}
 	limit     uint64
 	offset    uint64
 }
@@ -27,7 +27,7 @@ func newSelect(p *Operation, from *magicTable) *Select {
 // Where sets (or overwrites) the where clause information
 func (s Select) Where(w string, args ...interface{}) Select {
 	s.where = w
-	s.WhereArgs = args
+	s.whereArgs = args
 	return s
 }
 
@@ -67,7 +67,7 @@ func (s Select) SelectAllRows() *Rows {
 	}
 
 	var stmt = s.parent.Prepare(s.SQL())
-	return stmt.Query(s.WhereArgs...)
+	return stmt.Query(s.whereArgs...)
 }
 
 // SelectAllInto builds the SQL statement, runs it against this Select's
