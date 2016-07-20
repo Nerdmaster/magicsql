@@ -22,9 +22,9 @@ type UntaggedFoo struct {
 	six   string
 }
 
-// newUntaggedFoo is the generator for creating a default Foo instance
+// newUntaggedFoo is the generator for creating a default UntaggedFoo instance
 func newUntaggedFoo() interface{} {
-	return &Foo{Five: 5, six: "six"}
+	return &UntaggedFoo{Five: 5, six: "six"}
 }
 
 // This example showcases some of the ways SQL can be magically generated even
@@ -36,7 +36,7 @@ func Example_configTags() {
 		panic(err)
 	}
 
-	// Tie the "foos" table to the Foo type
+	// Tie the "foos" table to the UntaggedFoo type
 	db.RegisterTableConfig("foos", newUntaggedFoo, magicsql.ConfigTags{
 		"ID":    ",primary",
 		"Three": "tree",
@@ -50,22 +50,22 @@ func Example_configTags() {
 
 	// Insert four rows
 	op.BeginTransaction()
-	op.Save(&Foo{ONE: "one", TwO: 2, Three: true, Four: 4})
-	op.Save(&Foo{ONE: "thing", TwO: 5, Three: false, Four: 7})
-	op.Save(&Foo{ONE: "blargh", TwO: 1, Three: true, Four: 5})
-	op.Save(&Foo{ONE: "sploop", TwO: 2, Three: true, Four: 4})
+	op.Save(&UntaggedFoo{ONE: "one", TwO: 2, Three: true, Four: 4})
+	op.Save(&UntaggedFoo{ONE: "thing", TwO: 5, Three: false, Four: 7})
+	op.Save(&UntaggedFoo{ONE: "blargh", TwO: 1, Three: true, Four: 5})
+	op.Save(&UntaggedFoo{ONE: "sploop", TwO: 2, Three: true, Four: 4})
 	op.EndTransaction()
 	if op.Err() != nil {
 		panic(op.Err())
 	}
 
-	var fooList []*Foo
+	var fooList []*UntaggedFoo
 	op.From("foos").Where("two > 1").Limit(2).Offset(1).SelectAllInto(&fooList)
 
 	for _, f := range fooList {
-		fmt.Printf("Foo {%d,%s,%d,%#v,%d,%d,%s}\n", f.ID, f.ONE, f.TwO, f.Three, f.Four, f.Five, f.six)
+		fmt.Printf("UntaggedFoo {%d,%s,%d,%#v,%d,%d,%s}\n", f.ID, f.ONE, f.TwO, f.Three, f.Four, f.Five, f.six)
 	}
 	// Output:
-	// Foo {2,thing,5,false,7,5,six}
-	// Foo {4,sploop,2,true,4,5,six}
+	// UntaggedFoo {2,thing,5,false,7,5,six}
+	// UntaggedFoo {4,sploop,2,true,4,5,six}
 }
