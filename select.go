@@ -88,6 +88,8 @@ func (s Select) SelectAllRows() *Rows {
 //    op.From("table").SelectAllInto(&sl)
 func (s Select) SelectAllInto(ptr interface{}) {
 	var rows = s.SelectAllRows()
+	defer rows.Close()
+
 	var slice = reflect.ValueOf(ptr).Elem()
 	for rows.Next() {
 		var obj = s.table.generator()
