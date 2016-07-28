@@ -12,17 +12,12 @@ import (
 //     operation.From("people").Where("city = ?", varCity).SelectAllInto(peopleSlice)
 //     var rows = operation.From("people").Limit(10).SelectAllRows()
 type Select struct {
-	parent    *Operation
-	table     *magicTable
+	ot        *OperationTable
 	where     string
 	whereArgs []interface{}
 	order     string
 	limit     uint64
 	offset    uint64
-}
-
-func newSelect(p *Operation, from *magicTable) *Select {
-	return &Select{parent: p, table: from}
 }
 
 // Where sets (or overwrites) the where clause information
@@ -52,7 +47,7 @@ func (s Select) Order(o string) Select {
 
 // SQL returns the raw query this Select represents
 func (s Select) SQL() string {
-	var sql = fmt.Sprintf("SELECT %s FROM %s", strings.Join(s.table.FieldNames(), ","), s.table.name)
+	var sql = fmt.Sprintf("SELECT %s FROM %s", strings.Join(s.ot.t.FieldNames(), ","), s.ot.t.Name)
 	if s.where != "" {
 		sql += fmt.Sprintf(" WHERE %s", s.where)
 	}
@@ -69,31 +64,28 @@ func (s Select) SQL() string {
 	return sql
 }
 
-// SelectAllRows builds the SQL statement, runs it against this Select's
-// database Operation, and returns the resulting rows
-func (s Select) SelectAllRows() *Rows {
-	if s.parent.Err() != nil {
-		return &Rows{nil, s.parent}
+// AllRows builds the SQL statement, executes it through the parent
+// OperationTable, and returns the resulting rows
+func (s Select) AllRows() *Rows {
+	if s.ot.op.Err() != nil {
+		return &Rows{nil, s.ot.op}
 	}
 
-	var stmt = s.parent.Prepare(s.SQL())
+	var stmt = s.ot.op.Prepare(s.SQL())
 	return stmt.Query(s.whereArgs...)
 }
 
-// SelectAllInto builds the SQL statement, runs it against this Select's
-// database Operation, and populates the slice, initializing and growing it as
-// necessary.  A pointer to a registered type must be passed in:
-//
-//    var sl []Thing
-//    op.From("table").SelectAllInto(&sl)
-func (s Select) SelectAllInto(ptr interface{}) {
-	var rows = s.SelectAllRows()
+// AllObjects builds the SQL statement, executes it through the parent
+// OperationTable, and returns the resulting objects into ptr, which must be a
+// pointer to a slice of the type tied to this Select.
+func (s Select) AllObjects(ptr interface{}) {
+	var rows = s.AllRows()
 	defer rows.Close()
 
 	var slice = reflect.ValueOf(ptr).Elem()
 	for rows.Next() {
-		var obj = s.table.generator()
-		rows.Scan(s.table.ScanStruct(obj)...)
+		var obj = reflect.New(s.ot.t.RType).Interface()
+		rows.Scan(s.ot.t.ScanStruct(obj)...)
 		slice.Set(reflect.Append(slice, reflect.ValueOf(obj)))
 	}
 }

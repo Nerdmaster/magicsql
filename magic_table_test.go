@@ -17,28 +17,20 @@ type Foo struct {
 	six           string
 }
 
-func newFoo() interface{} {
-	return &Foo{}
-}
-
-var nmt = func(t string, g func() interface{}) *magicTable {
-	return newMagicTable(t, g, nil)
-}
-
 func TestQueryFields(t *testing.T) {
-	var table = nmt("foos", newFoo)
+	var table = Table("foos", &Foo{})
 	assert.Equal("one,two,tree,four,four_point_five", strings.Join(table.FieldNames(), ","), "Full field list", t)
 	assert.Equal(5, len(table.sqlFields), "THERE ARE FOUR LIGHTS!  Er, five... and fields, not lights....", t)
 }
 
 func TestSaveFieldNames(t *testing.T) {
-	var table = nmt("foos", newFoo)
+	var table = Table("foos", &Foo{})
 	assert.Equal("one,tree,four,four_point_five", strings.Join(table.SaveFieldNames(), ","), "Save field list", t)
 	assert.Equal(4, len(table.SaveFieldNames()), "THERE ARE FOUR LIGHTS!  Er, fields....", t)
 }
 
 func TestScanStruct(t *testing.T) {
-	var table = nmt("foos", newFoo)
+	var table = Table("foos", &Foo{})
 	var foo = &Foo{ONE: "blargh"}
 	var ptr = table.ScanStruct(foo)[0].(*NullableField).Value.(*string)
 	assert.Equal(foo.ONE, *ptr, "scanStruct properly pokes into the underlying data", t)
@@ -47,13 +39,13 @@ func TestScanStruct(t *testing.T) {
 }
 
 func TestInsertSQL(t *testing.T) {
-	var table = nmt("foos", newFoo)
+	var table = Table("foos", &Foo{})
 	var expected = "INSERT INTO foos (one,tree,four,four_point_five) VALUES (?,?,?,?)"
 	assert.Equal(expected, table.InsertSQL(), "Insert SQL", t)
 }
 
 func TestInsertArgs(t *testing.T) {
-	var table = nmt("foos", newFoo)
+	var table = Table("foos", &Foo{})
 	var foo = &Foo{ONE: "blargh"}
 	var save = table.InsertArgs(foo)
 	assert.Equal(foo.ONE, *save[0].(*string), "Arg 1 is Foo.ONE", t)
@@ -63,13 +55,13 @@ func TestInsertArgs(t *testing.T) {
 }
 
 func TestUpdateSQL(t *testing.T) {
-	var table = nmt("foos", newFoo)
+	var table = Table("foos", &Foo{})
 	var expected = "UPDATE foos SET one = ?,tree = ?,four = ?,four_point_five = ? WHERE two = ?"
 	assert.Equal(expected, table.UpdateSQL(), "Update SQL", t)
 }
 
 func TestUpdateArgs(t *testing.T) {
-	var table = nmt("foos", newFoo)
+	var table = Table("foos", &Foo{})
 	var foo = &Foo{ONE: "blargh"}
 	var save = table.UpdateArgs(foo)
 	assert.Equal(foo.ONE, *save[0].(*string), "Arg 1 is Foo.ONE", t)

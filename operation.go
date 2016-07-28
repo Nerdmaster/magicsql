@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"reflect"
+	"log"
 )
 
 // Querier defines an interface for top-level sql types that can run SQL and
@@ -31,6 +31,7 @@ type Operation struct {
 	err    error
 	tx     *sql.Tx
 	q      Querier
+	Dbg    bool
 }
 
 // NewOperation creates an operation in its default state: its parent is the
@@ -65,6 +66,10 @@ func (op *Operation) Query(query string, args ...interface{}) *Rows {
 		return &Rows{nil, op}
 	}
 
+	if op.Dbg {
+		log.Printf("DEBUG - Querying: %s, %#v", query, args)
+	}
+
 	var r, err = op.q.Query(query, args...)
 	op.SetErr(err)
 	return &Rows{r, op}
@@ -76,6 +81,10 @@ func (op *Operation) Exec(query string, args ...interface{}) *Result {
 		return &Result{nil, op}
 	}
 
+	if op.Dbg {
+		log.Printf("DEBUG - Executing: %s, %#v", query, args)
+	}
+
 	var r, err = op.q.Exec(query, args...)
 	op.SetErr(err)
 	return &Result{r, op}
@@ -85,6 +94,10 @@ func (op *Operation) Exec(query string, args ...interface{}) *Result {
 func (op *Operation) Prepare(query string) *Stmt {
 	if op.Err() != nil {
 		return &Stmt{nil, op}
+	}
+
+	if op.Dbg {
+		log.Printf("DEBUG - Preparing: %s", query)
 	}
 
 	var st, err = op.q.Prepare(query)
@@ -140,60 +153,36 @@ func (op *Operation) EndTransaction() {
 	op.q = op.parent.db
 }
 
-// From starts a scoped SQL chain for firing off a SELECT against the given
-// table, allowing things like this:
-//
-//     operation.From("people").Where("city = ?", varCity).SelectAllInto(peopleSlice)
-//     var rows = operation.From("people").Limit(10).SelectAllRows()
-//
-// A scope can be passed around, but right now its capabilities are extremely
-// limited, and I don't plan to make this particularly impressive.
-func (op *Operation) From(tableName string) *Select {
-	var emptySelect = &Select{parent: op}
-	if op.Err() != nil {
-		return emptySelect
-	}
-
-	var t = op.parent.findTableByName(tableName)
-	if t == nil {
-		op.SetErr(fmt.Errorf("table %s not registered", tableName))
-		return emptySelect
-	}
-
-	return newSelect(op, t)
+// Table creates an OperationTable tied to the given table name and reflecting
+// on obj's type to auto-build certain SQL statements
+func (op *Operation) Table(tableName string, obj interface{}) *OperationTable {
+	var mt = &MagicTable{Object: obj, Name: tableName}
+	mt.Configure(nil)
+	return &OperationTable{op: op, t: mt}
 }
 
-// Save creates an INSERT or UPDATE statement for the given object based on
-// whether its primary key is zero.  Stores any errors the database returns,
-// and fails if obj is of an unregistered type or has no primary key defined.
-func (op *Operation) Save(obj interface{}) *Result {
+// Save wraps Operation.Table() and Table.Save().  It creates an INSERT or
+// UPDATE statement for the given object based on whether its primary key is
+// zero.  Stores any errors the database returns, and fails if obj isn't tagged
+// with a primary key field.
+func (op *Operation) Save(tableName string, obj interface{}) *Result {
 	var emptyResult = &Result{nil, op}
 
 	if op.Err() != nil {
 		return emptyResult
 	}
 
-	var tt = reflect.TypeOf(obj).Elem()
-	var t = op.parent.findTableByType(tt)
-	if t == nil {
-		op.SetErr(fmt.Errorf("table for type %s not registered", tt.Name()))
+	var ot = op.Table(tableName, obj)
+	if ot.t.primaryKey == nil {
+		op.SetErr(fmt.Errorf("no primary key tagged for structure %s", ot.t.RType.Name()))
 		return emptyResult
 	}
 
-	if t.primaryKey == nil {
-		op.SetErr(fmt.Errorf("table for type %s has no primary key", tt.Name()))
-		return emptyResult
-	}
+	return ot.Save(obj)
+}
 
-	// Check for object's primary key field being zero
-	var rVal = reflect.ValueOf(obj).Elem()
-	var pkValField = rVal.FieldByName(t.primaryKey.Field.Name)
-	// TODO: check type when reading tags so we can handle non-int PKs earlier
-	if pkValField.Int() == 0 {
-		var res = op.Exec(t.InsertSQL(), t.InsertArgs(obj)...)
-		pkValField.SetInt(res.LastInsertId())
-		return res
-	}
-
-	return op.Exec(t.UpdateSQL(), t.UpdateArgs(obj)...)
+// Select wraps Operation.Table() and Table.Select().  It creates a Select
+// object for further refining.
+func (op *Operation) Select(tableName string, obj interface{}) Select {
+	return op.Table(tableName, obj).Select()
 }

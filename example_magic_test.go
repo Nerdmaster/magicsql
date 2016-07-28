@@ -26,11 +26,6 @@ type Foo struct {
 	six string
 }
 
-// newFoo is the generator for creating a default Foo instance
-func newFoo() interface{} {
-	return &Foo{Five: 5, six: "six"}
-}
-
 // This example showcases some of the ways SQL can be magically generated to
 // populate registered structures
 func Example_withMagic() {
@@ -40,8 +35,6 @@ func Example_withMagic() {
 		panic(err)
 	}
 
-	// Tie the "foos" table to the Foo type
-	db.RegisterTable("foos", newFoo)
 	var op = db.Operation()
 
 	// Create table schema
@@ -59,22 +52,22 @@ func Example_withMagic() {
 
 	// Insert four rows
 	op.BeginTransaction()
-	op.Save(&Foo{ONE: "one", TwO: 2, Three: true, Four: 4, FourPointFive: 9})
-	op.Save(&Foo{ONE: "thing", TwO: 5, Three: false, Four: 7, FourPointFive: -1})
-	op.Save(&Foo{ONE: "blargh", TwO: 1, Three: true, Four: 5})
-	op.Save(&Foo{ONE: "sploop", TwO: 2, Three: true, Four: 4})
+	op.Save("foos", &Foo{ONE: "one", TwO: 2, Three: true, Four: 4, FourPointFive: 9})
+	op.Save("foos", &Foo{ONE: "thing", TwO: 5, Three: false, Four: 7, FourPointFive: -1})
+	op.Save("foos", &Foo{ONE: "blargh", TwO: 1, Three: true, Four: 5})
+	op.Save("foos", &Foo{ONE: "sploop", TwO: 2, Three: true, Four: 4})
 	op.EndTransaction()
 	if op.Err() != nil {
 		panic(op.Err())
 	}
 
 	var fooList []*Foo
-	op.From("foos").Where("two > 1").Limit(2).Offset(1).Order("four_point_five DESC").SelectAllInto(&fooList)
+	op.Select("foos", &Foo{}).Where("two > 1").Limit(2).Offset(1).Order("four_point_five DESC").AllObjects(&fooList)
 
 	for _, f := range fooList {
-		fmt.Printf("Foo {%d,%s,%d,%#v,%d,%d,%d,%s}\n", f.ID, f.ONE, f.TwO, f.Three, f.Four, f.FourPointFive, f.Five, f.six)
+		fmt.Printf("Foo {%d,%s,%d,%#v,%d,%d}\n", f.ID, f.ONE, f.TwO, f.Three, f.Four, f.FourPointFive)
 	}
 	// Output:
-	// Foo {4,sploop,2,true,4,0,5,six}
-	// Foo {2,thing,5,false,7,-1,5,six}
+	// Foo {4,sploop,2,true,4,0}
+	// Foo {2,thing,5,false,7,-1}
 }

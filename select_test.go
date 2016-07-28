@@ -1,4 +1,4 @@
-// NOTE: This file relies on Foo and newFoo from the magic table test
+// NOTE: This file relies on Foo from the magic table test
 
 package magicsql
 
@@ -10,10 +10,9 @@ import (
 
 func TestSQL(t *testing.T) {
 	var op = &Operation{}
-	var table = newMagicTable("foos", newFoo, nil)
+	var s = op.Select("foos", &Foo{})
 	var expectedBase = "SELECT one,two,tree,four,four_point_five FROM foos"
 
-	var s = newSelect(op, table)
 	assert.Equal(expectedBase, s.SQL(), "SQL when there's no where/offset/limit", t)
 
 	var s2 = s.Where("x = ?", 1)

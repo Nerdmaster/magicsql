@@ -22,11 +22,6 @@ type UntaggedFoo struct {
 	six   string
 }
 
-// newUntaggedFoo is the generator for creating a default UntaggedFoo instance
-func newUntaggedFoo() interface{} {
-	return &UntaggedFoo{Five: 5, six: "six"}
-}
-
 // This example showcases some of the ways SQL can be magically generated even
 // without having a tagged structure
 func Example_configTags() {
@@ -37,12 +32,13 @@ func Example_configTags() {
 	}
 
 	// Tie the "foos" table to the UntaggedFoo type
-	db.RegisterTableConfig("foos", newUntaggedFoo, magicsql.ConfigTags{
+	var op = db.Operation()
+	var t = op.Table("foos", &UntaggedFoo{})
+	t.Reconfigure(magicsql.ConfigTags{
 		"ID":    ",primary",
 		"Three": "tree",
 		"Five":  "-",
 	})
-	var op = db.Operation()
 
 	// Create table schema
 	op.Exec("DROP TABLE IF EXISTS foos")
@@ -58,22 +54,22 @@ func Example_configTags() {
 
 	// Insert four rows
 	op.BeginTransaction()
-	op.Save(&UntaggedFoo{ONE: "one", TwO: 2, Three: true, Four: 4})
-	op.Save(&UntaggedFoo{ONE: "thing", TwO: 5, Three: false, Four: 7})
-	op.Save(&UntaggedFoo{ONE: "blargh", TwO: 1, Three: true, Four: 5})
-	op.Save(&UntaggedFoo{ONE: "sploop", TwO: 2, Three: true, Four: 4})
+	t.Save(&UntaggedFoo{ONE: "one", TwO: 2, Three: true, Four: 4})
+	t.Save(&UntaggedFoo{ONE: "thing", TwO: 5, Three: false, Four: 7})
+	t.Save(&UntaggedFoo{ONE: "blargh", TwO: 1, Three: true, Four: 5})
+	t.Save(&UntaggedFoo{ONE: "sploop", TwO: 2, Three: true, Four: 4})
 	op.EndTransaction()
 	if op.Err() != nil {
 		panic(op.Err())
 	}
 
 	var fooList []*UntaggedFoo
-	op.From("foos").Where("tw_o > 1").Limit(2).Offset(1).SelectAllInto(&fooList)
+	t.Select().Where("tw_o > 1").Limit(2).Offset(1).AllObjects(&fooList)
 
 	for _, f := range fooList {
-		fmt.Printf("UntaggedFoo {%d,%s,%d,%#v,%d,%d,%s}\n", f.ID, f.ONE, f.TwO, f.Three, f.Four, f.Five, f.six)
+		fmt.Printf("UntaggedFoo {%d,%s,%d,%#v,%d}\n", f.ID, f.ONE, f.TwO, f.Three, f.Four)
 	}
 	// Output:
-	// UntaggedFoo {2,thing,5,false,7,5,six}
-	// UntaggedFoo {4,sploop,2,true,4,5,six}
+	// UntaggedFoo {2,thing,5,false,7}
+	// UntaggedFoo {4,sploop,2,true,4}
 }

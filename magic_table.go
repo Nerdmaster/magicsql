@@ -11,35 +11,33 @@ type boundField struct {
 	Field reflect.StructField
 }
 
-// magicTable represents a named database table for reading data from a single
+// MagicTable represents a named database table for reading data from a single
 // table into a tagged structure
-type magicTable struct {
-	generator  func() interface{}
-	name       string
+type MagicTable struct {
+	Object     interface{}
+	Name       string
 	RType      reflect.Type
 	sqlFields  []*boundField
 	primaryKey *boundField
 }
 
-// newMagicTable creates a table structure with some pre-computed reflection
-// data for the given generator.  The generator must be a zero-argument
-// function which simply returns the type to be used with mapping sql to data.
-// It must be safe to run the generator immediately in order to read its
-// structure.  If conf is nil, the generator's object's tags are used to
-// determine field mappings, otherwise the conf data is used.
-func newMagicTable(tableName string, generator func() interface{}, conf ConfigTags) *magicTable {
-	var t = &magicTable{generator: generator, name: tableName}
-	t.reflect(conf)
-	return t
+// Table registers a table name and an object's type for use in database
+// operations.  The returned MagicTable is pre-configured using the object's
+// structure tags.
+func Table(name string, obj interface{}) *MagicTable {
+	var mt = &MagicTable{Name: name, Object: obj}
+	mt.Configure(nil)
+	return mt
 }
 
-// reflect traverses the wrapped structure to figure out which fields map to
-// database table fields and how.  If conf is non-nil, that is used in place
-// of struct tags.
-func (t *magicTable) reflect(conf ConfigTags) {
-	var obj = t.generator()
-	t.RType = reflect.TypeOf(obj).Elem()
-	var rVal = reflect.ValueOf(obj).Elem()
+// Configure traverses the wrapped structure to figure out which fields map to
+// database table columns and how.  If conf is non-nil, that is used in place
+// of struct tags.  This is run if a table is created with Table(), but can be
+// useful for reconfiguring a table with explicit ConfigTags.
+func (t *MagicTable) Configure(conf ConfigTags) {
+	t.sqlFields = nil
+	t.RType = reflect.TypeOf(t.Object).Elem()
+	var rVal = reflect.ValueOf(t.Object).Elem()
 
 	for i := 0; i < t.RType.NumField(); i++ {
 		var sf = t.RType.Field(i)
@@ -76,7 +74,7 @@ func (t *magicTable) reflect(conf ConfigTags) {
 
 // FieldNames returns all known table field names based on the tag parsing done
 // in newMagicTable
-func (t *magicTable) FieldNames() []string {
+func (t *MagicTable) FieldNames() []string {
 	var names []string
 	for _, bf := range t.sqlFields {
 		names = append(names, bf.Name)
@@ -87,7 +85,7 @@ func (t *magicTable) FieldNames() []string {
 // SaveFieldNames returns all fields' names except primary key (if one exists)
 // to ease insert and update statements where the primary key isn't part of
 // what's saved
-func (t *magicTable) SaveFieldNames() []string {
+func (t *MagicTable) SaveFieldNames() []string {
 	var names []string
 	for _, bf := range t.sqlFields {
 		if bf == t.primaryKey {
@@ -99,7 +97,7 @@ func (t *magicTable) SaveFieldNames() []string {
 }
 
 // ScanStruct sets up a structure suitable for calling Scan to populate dest
-func (t *magicTable) ScanStruct(dest interface{}) []interface{} {
+func (t *MagicTable) ScanStruct(dest interface{}) []interface{} {
 	var fields = make([]interface{}, len(t.sqlFields))
 	var rVal = reflect.ValueOf(dest).Elem()
 	for i, bf := range t.sqlFields {
@@ -113,7 +111,7 @@ func (t *magicTable) ScanStruct(dest interface{}) []interface{} {
 // InsertSQL returns the SQL string for inserting a record into this table.
 // This makes the assumption that the primary key is not being set, so it isn't
 // part of the fields list of values placeholder.
-func (t *magicTable) InsertSQL() string {
+func (t *MagicTable) InsertSQL() string {
 	var qList []string
 	for _, bf := range t.sqlFields {
 		if bf == t.primaryKey {
@@ -124,16 +122,17 @@ func (t *magicTable) InsertSQL() string {
 
 	var fields = strings.Join(t.SaveFieldNames(), ",")
 	var placeholders = strings.Join(qList, ",")
-	return fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)", t.name, fields, placeholders)
+	return fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)", t.Name, fields, placeholders)
 }
 
 // InsertArgs sets up and returns an array suitable for passing to an SQL Exec
 // call for doing an insert
-func (t *magicTable) InsertArgs(source interface{}) []interface{} {
+func (t *MagicTable) InsertArgs(source interface{}) []interface{} {
 	var save []interface{}
 	var rVal = reflect.ValueOf(source).Elem()
 
 	for _, bf := range t.sqlFields {
+		// TODO: Make this check for empty val so we can force primary keys in explicit Insert calls
 		if bf == t.primaryKey {
 			continue
 		}
@@ -146,7 +145,7 @@ func (t *magicTable) InsertArgs(source interface{}) []interface{} {
 
 // UpdateSQL returns the SQL string for updating a record in this table.
 // Returns an empty string if there's no primary key.
-func (t *magicTable) UpdateSQL() string {
+func (t *MagicTable) UpdateSQL() string {
 	if t.primaryKey == nil {
 		return ""
 	}
@@ -160,12 +159,12 @@ func (t *magicTable) UpdateSQL() string {
 	}
 	var sets = strings.Join(setList, ",")
 
-	return fmt.Sprintf("UPDATE %s SET %s WHERE %s = ?", t.name, sets, t.primaryKey.Name)
+	return fmt.Sprintf("UPDATE %s SET %s WHERE %s = ?", t.Name, sets, t.primaryKey.Name)
 }
 
 // UpdateArgs sets up and returns an array suitable for passing to an SQL Exec
 // call for doing an update.  Returns nil if there's no primary key.
-func (t *magicTable) UpdateArgs(source interface{}) []interface{} {
+func (t *MagicTable) UpdateArgs(source interface{}) []interface{} {
 	if t.primaryKey == nil {
 		return nil
 	}
