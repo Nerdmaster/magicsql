@@ -17,10 +17,15 @@ package as an unvendored dependency.
 Example
 ---
 
-See the two example files for runnable examples: [without magic](example_nomagic_test.go)
-and [with magic](example_magic_test.go).
+See the [go documentation](https://godoc.org/github.com/Nerdmaster/magicsql)
+for API information and examples.
 
-Also see the [go documentation](https://godoc.org/github.com/Nerdmaster/magicsql).
+Or view the runnable example files directly:
+
+- [without magic](example_nomagic_test.go)
+- [with magic](example_magic_test.go)
+- [config tag example](example_config_tags_test.go)
+- [select type](example_select_test.go)
 
 LICENSE
 ---
