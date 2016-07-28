@@ -41,11 +41,18 @@ func (ot *OperationTable) Save(obj interface{}) *Result {
 	return ot.op.Exec(ot.t.UpdateSQL(), ot.t.UpdateArgs(obj)...)
 }
 
-// Insert forces an insert, ignoring any primary key tagging
+// Insert forces an insert, ignoring any primary key tagging.  Note that
+// directly inserting via this method will *not* auto-set the primary key to
+// the last insert id.
 //
 // TODO: make the DB querying backend more flexible so it doesn't care about
 // tagging for generating SQL and arg lists, instead relying on field and
 // column name mappings
 func (ot *OperationTable) Insert(obj interface{}) *Result {
-	return nil
+	var pkField = ot.t.primaryKey
+	ot.t.primaryKey = nil
+	var res = ot.op.Exec(ot.t.InsertSQL(), ot.t.InsertArgs(obj)...)
+	ot.t.primaryKey = pkField
+
+	return res
 }
