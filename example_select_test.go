@@ -82,3 +82,46 @@ func ExampleSelect_EachObject() {
 	// That's 103 in people years!
 	// Pat is only 7 dog years old
 }
+
+// This is an example of using Select.Query to work with raw rows
+func ExampleSelect_Query() {
+	var db, err = magicsql.Open("sqlite3", "./test.db")
+	if err != nil {
+		panic(err)
+	}
+	var op = db.Operation()
+
+	op.Exec("DROP TABLE IF EXISTS people; CREATE TABLE people (name TEXT, age INT)")
+	op.Exec("INSERT INTO people VALUES ('Joe', 0), ('Jill', 1), ('Doug', 2), ('Deb', 3)")
+
+	var person struct {
+		Name string
+		Age  int
+	}
+
+	var r = op.Select("people", &person).Query()
+	for r.Next() {
+		r.Scan(&person.Name, &person.Age)
+		fmt.Printf("%s is %d years old\n", person.Name, person.Age)
+
+		// Let's use a more scientific computation for dog years here
+		var dy = person.Age * 4
+		if person.Age >= 1 {
+			dy += 8
+		}
+		if person.Age >= 2 {
+			dy += 8
+		}
+		fmt.Printf("That's %d in dog years!\n", dy)
+	}
+
+	// Output:
+	// Joe is 0 years old
+	// That's 0 in dog years!
+	// Jill is 1 years old
+	// That's 12 in dog years!
+	// Doug is 2 years old
+	// That's 24 in dog years!
+	// Deb is 3 years old
+	// That's 28 in dog years!
+}
