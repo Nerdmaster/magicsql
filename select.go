@@ -100,3 +100,15 @@ func (s Select) AllObjects(ptr interface{}) {
 		slice.Set(reflect.Append(slice, reflect.ValueOf(obj)))
 	}
 }
+
+// EachObject mimics AllObjects, but yields each item to the callback instead
+// of requiring a slice in which to put all of them at once
+func (s Select) EachObject(dest interface{}, cb func()) {
+	var r = s.AllRows()
+	defer r.Close()
+
+	for r.Next() {
+		r.Scan(s.ot.t.ScanStruct(dest)...)
+		cb()
+	}
+}
