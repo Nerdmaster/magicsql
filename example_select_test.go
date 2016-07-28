@@ -83,6 +83,53 @@ func ExampleSelect_EachObject() {
 	// Pat is only 7 dog years old
 }
 
+// This shows pulling a single record from the database without having to deal
+// with any looping
+func ExampleSelect_First() {
+	var db, err = magicsql.Open("sqlite3", "./test.db")
+	if err != nil {
+		panic(err)
+	}
+	var op = db.Operation()
+
+	op.Exec("DROP TABLE IF EXISTS people; CREATE TABLE people (name TEXT, age INT)")
+	op.Exec("INSERT INTO people VALUES ('Joe', 0), ('Jill', 1), ('Doug', 2), ('Deb', 3)")
+
+	var person struct {
+		Name string
+		Age  int
+	}
+
+	var ok = op.Select("people", &person).Order("age desc").First(&person)
+	fmt.Printf("%#v, %#v\n", ok, person)
+
+	// Output:
+	// true, struct { Name string; Age int }{Name:"Deb", Age:3}
+}
+
+// This shows Select.First when there's no data to pull
+func ExampleSelect_First_noData() {
+	var db, err = magicsql.Open("sqlite3", "./test.db")
+	if err != nil {
+		panic(err)
+	}
+	var op = db.Operation()
+
+	op.Exec("DROP TABLE IF EXISTS people; CREATE TABLE people (name TEXT, age INT)")
+
+	var person struct {
+		Name string
+		Age  int
+	}
+
+	person.Name = "Not initialized"
+	var ok = op.Select("people", &person).Order("age desc").First(&person)
+	fmt.Printf("%#v, %#v\n", ok, person)
+
+	// Output:
+	// false, struct { Name string; Age int }{Name:"Not initialized", Age:0}
+}
+
 // This is an example of using Select.Query to work with raw rows
 func ExampleSelect_Query() {
 	var db, err = magicsql.Open("sqlite3", "./test.db")

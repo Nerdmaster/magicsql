@@ -83,6 +83,21 @@ func (s Select) EachRow(cb func(Scannable)) {
 	}
 }
 
+// First builds the SQL statement, executes it through the parent
+// OperationTable, and returns the first object into dest.  If there are no
+// rows, ok is false.
+func (s Select) First(dest interface{}) (ok bool) {
+	var r = s.Query()
+	defer r.Close()
+
+	if !r.Next() {
+		return false
+	}
+
+	r.Scan(s.ot.t.ScanStruct(dest)...)
+	return true
+}
+
 // AllObjects builds the SQL statement, executes it through the parent
 // OperationTable, and returns the resulting objects into ptr, which must be a
 // pointer to a slice of the type tied to this Select.
