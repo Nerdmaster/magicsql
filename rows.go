@@ -4,6 +4,12 @@ import (
 	"database/sql"
 )
 
+// Scannable allows passing around the Rows struct, or something like it,
+// strictly for the purpose of pulling data out
+type Scannable interface {
+	Scan(...interface{})
+}
+
 // Rows is a light wrapper for sql.Rows
 type Rows struct {
 	rows *sql.Rows

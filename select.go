@@ -75,6 +75,17 @@ func (s Select) AllRows() *Rows {
 	return stmt.Query(s.whereArgs...)
 }
 
+// EachRow wraps AllRows, yielding a Scannable per row to the callback instead
+// of returning a *Rows object
+func (s Select) EachRow(cb func(Scannable)) {
+	var r = s.AllRows()
+	defer r.Close()
+
+	for r.Next() {
+		cb(r)
+	}
+}
+
 // AllObjects builds the SQL statement, executes it through the parent
 // OperationTable, and returns the resulting objects into ptr, which must be a
 // pointer to a slice of the type tied to this Select.
