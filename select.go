@@ -7,10 +7,7 @@ import (
 )
 
 // Select defines the table, where clause, and potentially other elements of an
-// in-progress SELECT statement, allowing, e.g.:
-//
-//     operation.From("people").Where("city = ?", varCity).SelectAllInto(peopleSlice)
-//     var rows = operation.From("people").Limit(10).SelectAllRows()
+// in-progress SELECT statement
 type Select struct {
 	ot        *OperationTable
 	where     string
