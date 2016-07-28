@@ -61,9 +61,9 @@ func (s Select) SQL() string {
 	return sql
 }
 
-// AllRows builds the SQL statement, executes it through the parent
+// Query builds the SQL statement, executes it through the parent
 // OperationTable, and returns the resulting rows
-func (s Select) AllRows() *Rows {
+func (s Select) Query() *Rows {
 	if s.ot.op.Err() != nil {
 		return &Rows{nil, s.ot.op}
 	}
@@ -72,10 +72,10 @@ func (s Select) AllRows() *Rows {
 	return stmt.Query(s.whereArgs...)
 }
 
-// EachRow wraps AllRows, yielding a Scannable per row to the callback instead
-// of returning a *Rows object
+// EachRow wraps Query, yielding a Scannable per row to the callback instead of
+// returning a *Rows object
 func (s Select) EachRow(cb func(Scannable)) {
-	var r = s.AllRows()
+	var r = s.Query()
 	defer r.Close()
 
 	for r.Next() {
@@ -87,7 +87,7 @@ func (s Select) EachRow(cb func(Scannable)) {
 // OperationTable, and returns the resulting objects into ptr, which must be a
 // pointer to a slice of the type tied to this Select.
 func (s Select) AllObjects(ptr interface{}) {
-	var rows = s.AllRows()
+	var rows = s.Query()
 	defer rows.Close()
 
 	var slice = reflect.ValueOf(ptr).Elem()
@@ -101,7 +101,7 @@ func (s Select) AllObjects(ptr interface{}) {
 // EachObject mimics AllObjects, but yields each item to the callback instead
 // of requiring a slice in which to put all of them at once
 func (s Select) EachObject(dest interface{}, cb func()) {
-	var r = s.AllRows()
+	var r = s.Query()
 	defer r.Close()
 
 	for r.Next() {
