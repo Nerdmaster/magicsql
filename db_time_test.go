@@ -1,0 +1,56 @@
+package magicsql
+
+import (
+	"fmt"
+	"testing"
+	"time"
+
+	"./assert"
+)
+
+type FooTime struct {
+	ID int `sql:"id,primary"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func getdbTime() *DB {
+	var db, err = Open("sqlite3", "./test.db")
+	var sqlStmt = `
+		drop table if exists foo_times;
+		create table foo_times (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			created_at datetime,
+			updated_at string
+		);
+	`
+	_, err = db.DataSource().Exec(sqlStmt)
+	if err != nil {
+		panic(err)
+	}
+
+	return db
+}
+
+func TestSaveTime(t *testing.T) {
+	var db = getdbTime()
+	var cr = time.Unix(1473000000, 0)
+	var up = time.Unix(1474000000, 0)
+	var ft = &FooTime{CreatedAt: cr, UpdatedAt: up}
+
+	var op = db.Operation()
+
+	var result = op.Save("foo_times", ft)
+	assert.True(op.Err() == nil, fmt.Sprintf("Operation error (%s) is nil", op.Err()), t)
+	assert.Equal(int64(1), result.RowsAffected(), "1 row was inserted", t)
+
+	var fooTimeList []*FooTime
+	op.Select("foo_times", &FooTime{}).AllObjects(&fooTimeList)
+	assert.Equal(1, len(fooTimeList), "We now have one Foo", t)
+	assert.Equal(1, ft.ID, "ft.ID was auto-populated", t)
+	assert.Equal(1, fooTimeList[0].ID, "fooTimeList[0].ID was auto-populated", t)
+	assert.Equal(cr.UTC().String(), fooTimeList[0].CreatedAt.UTC().String(),
+		"fooTimeList[0].CreatedAt was stored and retrieved correctly", t)
+	assert.Equal("0001-01-01 00:00:00 +0000 UTC", fooTimeList[0].UpdatedAt.UTC().String(),
+		"fooTimeList[0].UpdatedAt doesn't work since the database holds a string", t)
+}

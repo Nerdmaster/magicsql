@@ -2,6 +2,7 @@ package magicsql
 
 import (
 	"database/sql"
+	"time"
 )
 
 // NullableField implements the sql Scanner interface to make null values suck
@@ -14,7 +15,8 @@ type NullableField struct {
 }
 
 // Scan implements the Scanner interface.  Always returns a nil error.  Only
-// works with primitive types - no time or raw byte slices.
+// works with primitive types or direct mappings of time.Time fields.  e.g., if
+// the database holds a string, a field of time.Time won't be usable.
 func (nf *NullableField) Scan(src interface{}) error {
 	// Create a nullable field based on the type of the destination data
 	switch nf.Value.(type) {
@@ -26,6 +28,8 @@ func (nf *NullableField) Scan(src interface{}) error {
 		nf.storeBool(src)
 	case *string:
 		nf.storeString(src)
+	case *time.Time:
+		nf.storeTime(src)
 	}
 
 	return nil
@@ -97,4 +101,12 @@ func (nf *NullableField) storeString(src interface{}) {
 	}
 	d := nf.Value.(*string)
 	*d = n.String
+}
+
+func (nf *NullableField) storeTime(src interface{}) {
+	d := nf.Value.(*time.Time)
+	switch st := src.(type) {
+	case time.Time:
+		*d = st
+	}
 }
