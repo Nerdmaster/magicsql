@@ -1,4 +1,8 @@
 // NOTE: This file relies on Foo from the magic table test
+//
+// NOTE 2: `go get github.com/mattn/go-sqlite3` if you don't want tests to take
+// an absurd amount of time - `go test` doesn't seem to cache test-only
+// dependencies
 
 package magicsql
 
