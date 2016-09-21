@@ -15,8 +15,7 @@ type NullableField struct {
 }
 
 // Scan implements the Scanner interface.  Always returns a nil error.  Only
-// works with primitive types or direct mappings of time.Time fields.  e.g., if
-// the database holds a string, a field of time.Time won't be usable.
+// works with primitive types or simple mappings of time.Time fields.
 func (nf *NullableField) Scan(src interface{}) error {
 	// Create a nullable field based on the type of the destination data
 	switch nf.Value.(type) {
@@ -108,5 +107,27 @@ func (nf *NullableField) storeTime(src interface{}) {
 	switch st := src.(type) {
 	case time.Time:
 		*d = st
+	case string:
+		*d = parseTime(st)
+	case []byte:
+		*d = parseTime(string(st))
 	}
+}
+
+// parseTime attempts to parse a string into a time, using formats I've seen in
+// mysql and sqlite
+func parseTime(s string) time.Time {
+	var fmts = []string{
+		"2006-01-02 15:04:05",
+		"2006-01-02 15:04:05-07:00",
+	}
+	var t time.Time
+	var err error
+	for _, fmt := range fmts {
+		t, err = time.Parse(fmt, s)
+		if err == nil {
+			return t
+		}
+	}
+	return t
 }

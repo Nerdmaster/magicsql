@@ -51,6 +51,6 @@ func TestSaveTime(t *testing.T) {
 	assert.Equal(1, fooTimeList[0].ID, "fooTimeList[0].ID was auto-populated", t)
 	assert.Equal(cr.UTC().String(), fooTimeList[0].CreatedAt.UTC().String(),
 		"fooTimeList[0].CreatedAt was stored and retrieved correctly", t)
-	assert.Equal("0001-01-01 00:00:00 +0000 UTC", fooTimeList[0].UpdatedAt.UTC().String(),
-		"fooTimeList[0].UpdatedAt doesn't work since the database holds a string", t)
+	assert.Equal(up.UTC().String(), fooTimeList[0].UpdatedAt.UTC().String(),
+		"fooTimeList[0].UpdatedAt was stored and retrieved correctly", t)
 }
