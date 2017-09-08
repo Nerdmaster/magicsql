@@ -90,7 +90,9 @@ func (op *Operation) Exec(query string, args ...interface{}) *Result {
 	return &Result{r, op}
 }
 
-// Prepare wrap's sql's DB.Prepare, returning a wrapped Stmt
+// Prepare wrap's sql's DB.Prepare, returning a wrapped Stmt.  The statement
+// must be closed by the caller or eventually MySQL will run out of prepared
+// statements.
 func (op *Operation) Prepare(query string) *Stmt {
 	if op.Err() != nil {
 		return &Stmt{nil, op}
