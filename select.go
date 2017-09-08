@@ -68,8 +68,7 @@ func (s Select) Query() *Rows {
 		return &Rows{nil, s.ot.op}
 	}
 
-	var stmt = s.ot.op.Prepare(s.SQL())
-	return stmt.Query(s.whereArgs...)
+	return s.ot.op.Query(s.SQL(), s.whereArgs...)
 }
 
 // EachRow wraps Query, yielding a Scannable per row to the callback instead of
