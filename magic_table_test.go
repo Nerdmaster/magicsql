@@ -65,3 +65,34 @@ func TestUpdateArgs(t *testing.T) {
 	assert.Equal(foo.FourPointFive, *save[3].(*int), "Arg 4 is Foo.FourPointFive", t)
 	assert.Equal(foo.TwO, *save[4].(*int), "Arg 5 is Foo.TwO (for the where clause at the end)", t)
 }
+
+type Foo2 struct {
+	ID int `sql:",primary"`
+	NoInsert string `sql:",noinsert"`
+	NoUpdate string `sql:",noupdate"`
+}
+
+func TestNoInsertTag(t *testing.T) {
+	var table = Table("foo2s", &Foo2{})
+	var foo2 = &Foo2{NoInsert: "I won't be there on creation", NoUpdate: "I will!"}
+
+	var actual = table.InsertSQL()
+	var expected = "INSERT INTO foo2s (no_update) VALUES (?)"
+	assert.Equal(expected, actual, "Insert SQL for Foo2 tagged struct", t)
+	var save = table.InsertArgs(foo2)
+	assert.Equal(1, len(save), "Only one insert arg for Foo2", t)
+	assert.Equal("I will!", *save[0].(*string), "Arg 1 is the update-only arg", t)
+}
+
+func TestNoUpdateTag(t *testing.T) {
+	var table = Table("foo2s", &Foo2{})
+	var foo2 = &Foo2{NoInsert: "I'll be there on update!", NoUpdate: "I won't!"}
+
+	var actual = table.UpdateSQL()
+	var expected = "UPDATE foo2s SET no_insert = ? WHERE id = ?"
+	assert.Equal(expected, actual, "Update SQL for Foo2 tagged struct", t)
+	var save = table.UpdateArgs(foo2)
+	assert.Equal(2, len(save), "Only one update arg for Foo2 (and the id)", t)
+	assert.Equal("I'll be there on update!", *save[0].(*string), "Arg 1 is the insert-only arg", t)
+	assert.Equal(0, *save[1].(*int), "Arg 2 is the id", t)
+}

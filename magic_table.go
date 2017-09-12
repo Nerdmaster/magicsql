@@ -9,7 +9,8 @@ import (
 type boundField struct {
 	Name     string
 	Field    reflect.StructField
-	ReadOnly bool
+	NoInsert bool
+	NoUpdate bool
 }
 
 // MagicTable represents a named database table for reading data from a single
@@ -64,15 +65,27 @@ func (t *MagicTable) Configure(conf ConfigTags) {
 			sqlf = toUnderscore(sf.Name)
 		}
 
-		var bf = &boundField{sqlf, sf, false}
+		var bf = &boundField{sqlf, sf, false, false}
 		t.sqlFields = append(t.sqlFields, bf)
 
-		if len(parts) > 1 && parts[1] == "primary" && t.primaryKey == nil {
-			bf.ReadOnly = true
-			t.primaryKey = bf
-		}
-		if len(parts) > 1 && parts[1] == "readonly" {
-			bf.ReadOnly = true
+		if len(parts) > 1 {
+			for _, part := range parts[1:] {
+				switch part {
+				case "primary":
+					if t.primaryKey == nil {
+						bf.NoInsert = true
+						bf.NoUpdate = true
+						t.primaryKey = bf
+					}
+				case "readonly":
+					bf.NoInsert = true
+					bf.NoUpdate = true
+				case "noinsert":
+					bf.NoInsert = true
+				case "noupdate":
+					bf.NoUpdate = true
+				}
+			}
 		}
 	}
 }
@@ -106,7 +119,7 @@ func (t *MagicTable) InsertSQL() string {
 	var fList []string
 	var qList []string
 	for _, bf := range t.sqlFields {
-		if bf.ReadOnly {
+		if bf.NoInsert {
 			continue
 		}
 		fList = append(fList, bf.Name)
@@ -126,7 +139,7 @@ func (t *MagicTable) InsertArgs(source interface{}) []interface{} {
 
 	for _, bf := range t.sqlFields {
 		// TODO: Make this check for empty val so we can force primary keys in explicit Insert calls
-		if bf.ReadOnly {
+		if bf.NoInsert {
 			continue
 		}
 		var vf = rVal.FieldByName(bf.Field.Name)
@@ -145,7 +158,7 @@ func (t *MagicTable) UpdateSQL() string {
 
 	var setList []string
 	for _, bf := range t.sqlFields {
-		if bf.ReadOnly {
+		if bf.NoUpdate {
 			continue
 		}
 		setList = append(setList, fmt.Sprintf("%s = ?", bf.Name))
@@ -166,7 +179,7 @@ func (t *MagicTable) UpdateArgs(source interface{}) []interface{} {
 	var rVal = reflect.ValueOf(source).Elem()
 
 	for _, bf := range t.sqlFields {
-		if bf.ReadOnly {
+		if bf.NoUpdate {
 			continue
 		}
 		var vf = rVal.FieldByName(bf.Field.Name)
