@@ -53,6 +53,7 @@ func Example_withoutMagic() {
 	stmt.Exec("thing", 5, false, 7)
 	stmt.Exec("blargh", 1, true, 5)
 	stmt.Exec("sploop", 2, true, 4)
+	stmt.Close()
 
 	// Instead of calling commit/rollback, we let the transaction figure it out
 	// based on its error state
@@ -63,6 +64,7 @@ func Example_withoutMagic() {
 	stmt = op.Prepare("INSERT INTO foos (one,two,tree,four) VALUES (?, ?, ?, ?)")
 	stmt.Exec("one+", 2, true, 4)
 	stmt.Exec("thing+", 5, false, 7)
+	stmt.Close()
 
 	rows = op.Query("SELECT COUNT(*) FROM foos")
 	count = -1
