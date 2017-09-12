@@ -87,20 +87,6 @@ func (t *MagicTable) FieldNames() []string {
 	return names
 }
 
-// SaveFieldNames returns all fields' names except primary key (if one exists)
-// and any tagged readonly to ease insert and update statements where the
-// primary key isn't part of what's saved
-func (t *MagicTable) SaveFieldNames() []string {
-	var names []string
-	for _, bf := range t.sqlFields {
-		if bf.ReadOnly {
-			continue
-		}
-		names = append(names, bf.Name)
-	}
-	return names
-}
-
 // ScanStruct sets up a structure suitable for calling Scan to populate dest
 func (t *MagicTable) ScanStruct(dest interface{}) []interface{} {
 	var fields = make([]interface{}, len(t.sqlFields))
@@ -117,15 +103,17 @@ func (t *MagicTable) ScanStruct(dest interface{}) []interface{} {
 // This makes the assumption that the primary key is not being set, so it isn't
 // part of the fields list of values placeholder.
 func (t *MagicTable) InsertSQL() string {
+	var fList []string
 	var qList []string
 	for _, bf := range t.sqlFields {
 		if bf.ReadOnly {
 			continue
 		}
+		fList = append(fList, bf.Name)
 		qList = append(qList, "?")
 	}
 
-	var fields = strings.Join(t.SaveFieldNames(), ",")
+	var fields = strings.Join(fList, ",")
 	var placeholders = strings.Join(qList, ",")
 	return fmt.Sprintf("INSERT INTO %s (%s) VALUES (%s)", t.Name, fields, placeholders)
 }

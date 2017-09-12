@@ -24,12 +24,6 @@ func TestQueryFields(t *testing.T) {
 	assert.Equal(6, len(table.sqlFields), "THERE ARE FOUR LIGHTS!  Er, six... and fields, not lights....", t)
 }
 
-func TestSaveFieldNames(t *testing.T) {
-	var table = Table("foos", &Foo{})
-	assert.Equal("one,tree,four,four_point_five", strings.Join(table.SaveFieldNames(), ","), "Save field list", t)
-	assert.Equal(4, len(table.SaveFieldNames()), "THERE ARE FOUR LIGHTS!  Er, fields....", t)
-}
-
 func TestScanStruct(t *testing.T) {
 	var table = Table("foos", &Foo{})
 	var foo = &Foo{ONE: "blargh"}
