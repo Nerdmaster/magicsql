@@ -24,6 +24,8 @@ type Foo struct {
 	Five int `sql:"-"`
 	// six isn't exported, so is implicitly skipped
 	six string
+	// Seven is read-only, so it can be selected but not stored
+	Seven string `sql:",readonly"`
 }
 
 // This example showcases some of the ways SQL can be magically generated to
@@ -46,7 +48,8 @@ func Example_withMagic() {
 			two INT,
 			tree BOOL,
 			four INT,
-			four_point_five INT
+			four_point_five INT,
+			seven TEXT DEFAULT "blargh"
 		);
 	`)
 
@@ -55,7 +58,12 @@ func Example_withMagic() {
 	op.Save("foos", &Foo{ONE: "one", TwO: 2, Three: true, Four: 4, FourPointFive: 9})
 	op.Save("foos", &Foo{ONE: "thing", TwO: 5, Three: false, Four: 7, FourPointFive: -1})
 	op.Save("foos", &Foo{ONE: "blargh", TwO: 1, Three: true, Four: 5})
-	op.Save("foos", &Foo{ONE: "sploop", TwO: 2, Three: true, Four: 4})
+
+	// Fields "Five" and "six" won't be preserved since there's no place to put
+	// them, so we won't see their values below.  Field "Seven" is readonly and
+	// so will retain its default value.
+	op.Save("foos", &Foo{ONE: "sploop", TwO: 2, Three: true, Four: 4, Five: 29, six: "twenty-nine", Seven: "nope"})
+
 	op.EndTransaction()
 	if op.Err() != nil {
 		panic(op.Err())
@@ -65,9 +73,10 @@ func Example_withMagic() {
 	op.Select("foos", &Foo{}).Where("two > 1").Limit(2).Offset(1).Order("four_point_five DESC").AllObjects(&fooList)
 
 	for _, f := range fooList {
-		fmt.Printf("Foo {%d,%s,%d,%#v,%d,%d}\n", f.ID, f.ONE, f.TwO, f.Three, f.Four, f.FourPointFive)
+		fmt.Printf("Foo {%d,%s,%d,%#v,%d,%d,%d,%q,%q}\n",
+			f.ID, f.ONE, f.TwO, f.Three, f.Four, f.FourPointFive, f.Five, f.six, f.Seven)
 	}
 	// Output:
-	// Foo {4,sploop,2,true,4,0}
-	// Foo {2,thing,5,false,7,-1}
+	// Foo {4,sploop,2,true,4,0,0,"","blargh"}
+	// Foo {2,thing,5,false,7,-1,0,"","blargh"}
 }

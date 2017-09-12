@@ -11,7 +11,7 @@ import (
 func TestSQL(t *testing.T) {
 	var op = &Operation{}
 	var s = op.Select("foos", &Foo{})
-	var expectedBase = "SELECT one,two,tree,four,four_point_five FROM foos"
+	var expectedBase = "SELECT one,two,tree,four,four_point_five,seven FROM foos"
 
 	assert.Equal(expectedBase, s.SQL(), "SQL when there's no where/offset/limit", t)
 

@@ -15,12 +15,13 @@ type Foo struct {
 	FourPointFive int
 	Five          int `sql:"-"`
 	six           string
+	Seven         string `sql:",readonly"`
 }
 
 func TestQueryFields(t *testing.T) {
 	var table = Table("foos", &Foo{})
-	assert.Equal("one,two,tree,four,four_point_five", strings.Join(table.FieldNames(), ","), "Full field list", t)
-	assert.Equal(5, len(table.sqlFields), "THERE ARE FOUR LIGHTS!  Er, five... and fields, not lights....", t)
+	assert.Equal("one,two,tree,four,four_point_five,seven", strings.Join(table.FieldNames(), ","), "Full field list", t)
+	assert.Equal(6, len(table.sqlFields), "THERE ARE FOUR LIGHTS!  Er, six... and fields, not lights....", t)
 }
 
 func TestSaveFieldNames(t *testing.T) {

@@ -7,8 +7,9 @@ import (
 )
 
 type boundField struct {
-	Name  string
-	Field reflect.StructField
+	Name     string
+	Field    reflect.StructField
+	ReadOnly bool
 }
 
 // MagicTable represents a named database table for reading data from a single
@@ -63,11 +64,15 @@ func (t *MagicTable) Configure(conf ConfigTags) {
 			sqlf = toUnderscore(sf.Name)
 		}
 
-		var bf = &boundField{sqlf, sf}
+		var bf = &boundField{sqlf, sf, false}
 		t.sqlFields = append(t.sqlFields, bf)
 
 		if len(parts) > 1 && parts[1] == "primary" && t.primaryKey == nil {
+			bf.ReadOnly = true
 			t.primaryKey = bf
+		}
+		if len(parts) > 1 && parts[1] == "readonly" {
+			bf.ReadOnly = true
 		}
 	}
 }
@@ -83,12 +88,12 @@ func (t *MagicTable) FieldNames() []string {
 }
 
 // SaveFieldNames returns all fields' names except primary key (if one exists)
-// to ease insert and update statements where the primary key isn't part of
-// what's saved
+// and any tagged readonly to ease insert and update statements where the
+// primary key isn't part of what's saved
 func (t *MagicTable) SaveFieldNames() []string {
 	var names []string
 	for _, bf := range t.sqlFields {
-		if bf == t.primaryKey {
+		if bf.ReadOnly {
 			continue
 		}
 		names = append(names, bf.Name)
@@ -114,7 +119,7 @@ func (t *MagicTable) ScanStruct(dest interface{}) []interface{} {
 func (t *MagicTable) InsertSQL() string {
 	var qList []string
 	for _, bf := range t.sqlFields {
-		if bf == t.primaryKey {
+		if bf.ReadOnly {
 			continue
 		}
 		qList = append(qList, "?")
@@ -133,7 +138,7 @@ func (t *MagicTable) InsertArgs(source interface{}) []interface{} {
 
 	for _, bf := range t.sqlFields {
 		// TODO: Make this check for empty val so we can force primary keys in explicit Insert calls
-		if bf == t.primaryKey {
+		if bf.ReadOnly {
 			continue
 		}
 		var vf = rVal.FieldByName(bf.Field.Name)
@@ -152,7 +157,7 @@ func (t *MagicTable) UpdateSQL() string {
 
 	var setList []string
 	for _, bf := range t.sqlFields {
-		if bf == t.primaryKey {
+		if bf.ReadOnly {
 			continue
 		}
 		setList = append(setList, fmt.Sprintf("%s = ?", bf.Name))
@@ -173,7 +178,7 @@ func (t *MagicTable) UpdateArgs(source interface{}) []interface{} {
 	var rVal = reflect.ValueOf(source).Elem()
 
 	for _, bf := range t.sqlFields {
-		if bf == t.primaryKey {
+		if bf.ReadOnly {
 			continue
 		}
 		var vf = rVal.FieldByName(bf.Field.Name)
