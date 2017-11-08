@@ -163,6 +163,12 @@ func (op *Operation) Table(tableName string, obj interface{}) *OperationTable {
 	return &OperationTable{op: op, t: mt}
 }
 
+// OperationTable allows tying a stored MagicTable to this specific operation,
+// rather than passing table name and an empty interface to Select() and Save()
+func (op *Operation) OperationTable(mt *MagicTable) *OperationTable {
+	return &OperationTable{op: op, t: mt}
+}
+
 // Save wraps Operation.Table() and Table.Save().  It creates an INSERT or
 // UPDATE statement for the given object based on whether its primary key is
 // zero.  Stores any errors the database returns, and fails if obj isn't tagged
