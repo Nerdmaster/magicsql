@@ -67,7 +67,7 @@ func TestUpdateArgs(t *testing.T) {
 }
 
 type Foo2 struct {
-	ID int `sql:",primary"`
+	ID       int    `sql:",primary"`
 	NoInsert string `sql:",noinsert"`
 	NoUpdate string `sql:",noupdate"`
 }

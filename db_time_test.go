@@ -9,7 +9,7 @@ import (
 )
 
 type FooTime struct {
-	ID int `sql:"id,primary"`
+	ID        int `sql:"id,primary"`
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
