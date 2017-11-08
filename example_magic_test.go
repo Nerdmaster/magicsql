@@ -64,16 +64,19 @@ func Example_withMagic() {
 
 	// Insert four rows
 	op.BeginTransaction()
-	op.Save("foos", &Foo{ONE: "one", TwO: 2, Three: true, Four: 4, FourPointFive: 9})
-	op.Save("foos", &Foo{ONE: "thing", TwO: 5, Three: false, Four: 7, FourPointFive: -1})
-	op.Save("foos", &Foo{ONE: "blargh", TwO: 1, Three: true, Four: 5})
+	var mt = magicsql.Table("foos", &Foo{})
+	var ot = op.OperationTable(mt)
+
+	ot.Save(&Foo{ONE: "one", TwO: 2, Three: true, Four: 4, FourPointFive: 9})
+	ot.Save(&Foo{ONE: "thing", TwO: 5, Three: false, Four: 7, FourPointFive: -1})
+	ot.Save(&Foo{ONE: "blargh", TwO: 1, Three: true, Four: 5})
 
 	// Fields "Five" and "six" won't be preserved since there's no place to put
 	// them, so we won't see their values below.  Field "Seven" is readonly and
 	// so will retain its default value.  Field "Eight" won't get set on insert,
 	// so will be 0 until we update.  Field "Nine" will be set on insert, but
 	// can't be updated.
-	op.Save("foos", &Foo{
+	ot.Save(&Foo{
 		ONE:      "sploop",
 		TwO:      2,
 		Three:    true,
@@ -91,7 +94,7 @@ func Example_withMagic() {
 	}
 
 	var fooList []*Foo
-	op.Select("foos", &Foo{}).Where("two > 1").Limit(2).Offset(1).Order("four_point_five DESC").AllObjects(&fooList)
+	ot.Select().Where("two > 1").Limit(2).Offset(1).Order("four_point_five DESC").AllObjects(&fooList)
 
 	for _, f := range fooList {
 		fmt.Printf("Foo {%d,%s,%d,%#v,%d,%d,%d,%q,%q,%d,%d}\n",
@@ -102,9 +105,9 @@ func Example_withMagic() {
 	var f = fooList[0]
 	f.NoInsert = 99
 	f.NoUpdate = 99
-	op.Save("foos", f)
+	ot.Save(f)
 
-	op.Select("foos", &Foo{}).Where("id = ?", 4).First(f)
+	ot.Select().Where("id = ?", 4).First(f)
 	fmt.Printf("Foo {%d,%s,%d,%#v,%d,%d,%d,%q,%q,%d,%d}\n",
 		f.ID, f.ONE, f.TwO, f.Three, f.Four, f.FourPointFive, f.Five, f.six, f.Seven, f.NoInsert, f.NoUpdate)
 
