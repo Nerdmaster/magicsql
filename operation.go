@@ -136,6 +136,19 @@ func (op *Operation) BeginTransaction() {
 	op.q = tx
 }
 
+// Rollback tries to roll back the transaction even if there is no error
+func (op *Operation) Rollback() {
+	// If there was never a transaction due to errors, this could happen and we
+	// don't want a panic
+	if op.tx == nil {
+		return
+	}
+
+	op.tx.Rollback()
+	op.tx = nil
+	op.q = op.parent.db
+}
+
 // EndTransaction commits the transaction if no errors occurred, or rolls back
 // if there was an error
 func (op *Operation) EndTransaction() {
