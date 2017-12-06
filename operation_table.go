@@ -20,7 +20,7 @@ func (ot *OperationTable) Reconfigure(conf ConfigTags) {
 // Select simply instantiates a Select instance with the OperationTable set up
 // for it to use for gathering fields and running the query
 func (ot *OperationTable) Select() Select {
-	return Select{ot: ot}
+	return NewSelect(ot)
 }
 
 // Save determines if an INSERT or UPDATE is necessary (primary key of 0 means

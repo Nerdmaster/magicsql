@@ -107,12 +107,16 @@ func Example_withMagic() {
 	f.NoUpdate = 99
 	ot.Save(f)
 
-	ot.Select().Where("id = ?", 4).First(f)
+	var sel = ot.Select().Where("id = ?", 4)
+	var cnt = sel.Count()
+	fmt.Printf("Number of rows with id of 4: %d\n", cnt.RowCount())
+	sel.First(f)
 	fmt.Printf("Foo {%d,%s,%d,%#v,%d,%d,%d,%q,%q,%d,%d}\n",
 		f.ID, f.ONE, f.TwO, f.Three, f.Four, f.FourPointFive, f.Five, f.six, f.Seven, f.NoInsert, f.NoUpdate)
 
 	// Output:
 	// Foo {4,sploop,2,true,4,0,0,"","blargh",0,1010}
 	// Foo {2,thing,5,false,7,-1,0,"","blargh",0,0}
+	// Number of rows with id of 4: 1
 	// Foo {4,sploop,2,true,4,0,0,"","blargh",99,1010}
 }

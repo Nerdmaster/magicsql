@@ -15,6 +15,32 @@ type Select struct {
 	order     string
 	limit     uint64
 	offset    uint64
+	sqlfunc   func(Select) string
+}
+
+func selectSQL(s Select) string {
+	var sql = fmt.Sprintf("SELECT %s FROM %s", strings.Join(s.ot.t.FieldNames(), ","), s.ot.t.Name)
+	if s.where != "" {
+		sql += fmt.Sprintf(" WHERE %s", s.where)
+	}
+	if s.order != "" {
+		sql += fmt.Sprintf(" ORDER BY %s", s.order)
+	}
+	if s.limit > 0 {
+		sql += fmt.Sprintf(" LIMIT %d", s.limit)
+	}
+	if s.offset > 0 {
+		sql += fmt.Sprintf(" OFFSET %d", s.offset)
+	}
+
+	return sql
+}
+
+// NewSelect creates a new Select instance tied to the given OperationTable
+func NewSelect(ot *OperationTable) Select {
+	var s = Select{ot: ot}
+	s.sqlfunc = selectSQL
+	return s
 }
 
 // Where sets (or overwrites) the where clause information
@@ -44,21 +70,7 @@ func (s Select) Order(o string) Select {
 
 // SQL returns the raw query this Select represents
 func (s Select) SQL() string {
-	var sql = fmt.Sprintf("SELECT %s FROM %s", strings.Join(s.ot.t.FieldNames(), ","), s.ot.t.Name)
-	if s.where != "" {
-		sql += fmt.Sprintf(" WHERE %s", s.where)
-	}
-	if s.order != "" {
-		sql += fmt.Sprintf(" ORDER BY %s", s.order)
-	}
-	if s.limit > 0 {
-		sql += fmt.Sprintf(" LIMIT %d", s.limit)
-	}
-	if s.offset > 0 {
-		sql += fmt.Sprintf(" OFFSET %d", s.offset)
-	}
-
-	return sql
+	return s.sqlfunc(s)
 }
 
 // Query builds the SQL statement, executes it through the parent
