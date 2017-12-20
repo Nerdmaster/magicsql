@@ -34,7 +34,12 @@ func (ot *OperationTable) Save(obj interface{}) *Result {
 
 	if pkValField.Interface() == reflect.Zero(pkValField.Type()).Interface() {
 		var res = ot.op.Exec(ot.t.InsertSQL(), ot.t.InsertArgs(obj)...)
-		pkValField.SetInt(res.LastInsertId())
+		switch pkValField.Type().Kind() {
+		case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+			pkValField.SetInt(res.LastInsertId())
+		case reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64:
+			pkValField.SetUint(uint64(res.LastInsertId()))
+		}
 		return res
 	}
 
