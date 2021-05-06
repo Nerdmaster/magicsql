@@ -108,9 +108,9 @@ func (nf *NullableField) storeTime(src interface{}) {
 	case time.Time:
 		*d = st
 	case string:
-		*d = parseTime(st)
+		*d = parseTime(st).Local()
 	case []byte:
-		*d = parseTime(string(st))
+		*d = parseTime(string(st)).Local()
 	}
 }
 
