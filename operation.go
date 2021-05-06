@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"log"
+	"strconv"
+	"time"
 )
 
 // Querier defines an interface for top-level sql types that can run SQL and
@@ -67,7 +69,7 @@ func (op *Operation) Query(query string, args ...interface{}) *Rows {
 	}
 
 	if op.Dbg {
-		log.Printf("DEBUG - Querying: %s, %#v", query, args)
+		log.Printf("DEBUG - Querying: %s, %#v", query, stringifyArgs(args))
 	}
 
 	var r, err = op.q.Query(query, args...)
@@ -82,12 +84,62 @@ func (op *Operation) Exec(query string, args ...interface{}) *Result {
 	}
 
 	if op.Dbg {
-		log.Printf("DEBUG - Executing: %s, %#v", query, args)
+		log.Printf("DEBUG - Executing: %s, %#v", query, stringifyArgs(args))
 	}
 
 	var r, err = op.q.Exec(query, args...)
 	op.SetErr(err)
 	return &Result{r, op}
+}
+
+func stringifyArgs(args ...interface{}) []string {
+	var sArgs []string
+	for _, arg := range args {
+		if v, ok := arg.([]interface{}); ok {
+			sArgs = append(sArgs, stringifyArgs(v...)...)
+		} else {
+			sArgs = append(sArgs, stringify(arg))
+		}
+	}
+
+	return sArgs
+}
+
+func stringify(arg interface{}) string {
+	switch v := arg.(type) {
+	case *int:
+		return strconv.FormatInt(int64(*v), 10)
+	case *int8:
+		return strconv.FormatInt(int64(*v), 10)
+	case *int16:
+		return strconv.FormatInt(int64(*v), 10)
+	case *int32:
+		return strconv.FormatInt(int64(*v), 10)
+	case *int64:
+		return strconv.FormatInt(*v, 10)
+	case *uint:
+		return strconv.FormatUint(uint64(*v), 10)
+	case *uint8:
+		return strconv.FormatUint(uint64(*v), 10)
+	case *uint16:
+		return strconv.FormatUint(uint64(*v), 10)
+	case *uint32:
+		return strconv.FormatUint(uint64(*v), 10)
+	case *uint64:
+		return strconv.FormatUint(*v, 10)
+	case *float32:
+		return strconv.FormatFloat(float64(*v), 'g', -1, 32)
+	case *float64:
+		return strconv.FormatFloat(*v, 'g', -1, 64)
+	case *bool:
+		return strconv.FormatBool(*v)
+	case *string:
+		return *v
+	case *time.Time:
+		return (*v).Format(time.RFC3339Nano)
+	default:
+		return fmt.Sprintf("<<%s>>", v)
+	}
 }
 
 // Prepare wrap's sql's DB.Prepare, returning a wrapped Stmt.  The statement
