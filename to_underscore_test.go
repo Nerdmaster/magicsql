@@ -3,7 +3,7 @@ package magicsql
 import (
 	"testing"
 
-	"./assert"
+	"github.com/Nerdmaster/magicsql/assert"
 )
 
 func TestToUnderscore(t *testing.T) {

@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"testing"
 
-	"./assert"
+	"github.com/Nerdmaster/magicsql/assert"
 
 	_ "github.com/mattn/go-sqlite3"
 )

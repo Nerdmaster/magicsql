@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"./assert"
+	"github.com/Nerdmaster/magicsql/assert"
 )
 
 type Foo struct {

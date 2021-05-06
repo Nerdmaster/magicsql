@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"./assert"
+	"github.com/Nerdmaster/magicsql/assert"
 )
 
 type FooTime struct {
